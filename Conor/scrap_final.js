@@ -1,4 +1,4 @@
-var url ='https://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=8&season=2016&month=0&season1=2016&ind=0&team=9&rost=0&age=0';
+var url ='https://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=8&season=2017&month=0&season1=2017&ind=0&team=3&rost=0&age=0';
 var page = new WebPage()
 var fs = require('fs');
 
