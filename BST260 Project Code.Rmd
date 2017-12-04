@@ -1,0 +1,70 @@
+---
+title: "BST260 Final Project"
+author: "Conor Foley, Benjamin Hong, Cathy Wang"
+date: "12/4/2017"
+output: html_document
+---
+
+```{r Load packages, echo = FALSE, message = FALSE, warning = FALSE}
+library(XML)
+library(RCurl)
+library(rlist)
+```
+
+### Overview and Motivation
+
+### Related Work
+
+### Initial Questions
+
+### Data
+
+### Exploratory Analysis
+
+### Final Analysis
+
+**Baseball Prospectus**
+
+```{r Baseball Prospectus, eval = FALSE}
+url_batting <- "http://legacy.baseballprospectus.com/sortable/index.php?cid=2022181"
+url_pitching <- "http://legacy.baseballprospectus.com/sortable/index.php?cid=1931167"
+
+prospectus <- function(year, url){
+  year = as.character(year)
+  pgsession <- html_session(url)
+  pgform <- html_form(pgsession)[[3]]
+  
+  #Fill in selection form
+  filled_form <-set_values(pgform,
+                           "year" = year
+  )
+  
+  #Submit selection form
+  d <- submit_form(session = pgsession, form = filled_form)
+  dat <- d %>%
+    html_nodes("table") %>%
+    .[[5]] %>%
+    html_table(header = TRUE)
+  dat
+}
+
+#Submit Year = X for X in [1871, 2017] to obtain year-specific data
+prospectus_batting <- do.call(rbind, lapply(1871:2017, prospectus, url = url_batting))
+prospectus_pitching <- do.call(rbind, lapply(1871:2017, prospectus, url = url_pitching))
+
+#Reformat data 
+prospectus_pitching_small <- prospectus_pitching[, c("NAME", "TEAM", "YEAR", "PWARP")]
+names(prospectus_pitching_small) <- c("Name", "Team", "Year", "WAR")
+prospectus_batting_small <- prospectus_batting[, c("NAME", "TEAM", "YEAR", "BWARP")]
+names(prospectus_batting_small) <- c("Name", "Team", "Year", "WAR")
+```
+
+```{r, eval = FALSE}
+#Save as .csv
+prospectus <- rbind(prospectus_pitching_small, prospectus_batting_small)
+write.csv(prospectus, file = "prospectus.csv")
+
+prospectus <- read.csv("prospectus.csv", header = TRUE)
+prospectus$X <- NULL
+head(prospectus)
+```
