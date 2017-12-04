@@ -11,9 +11,9 @@ FanGraphWar = matrix(nrow=30, ncol= 115)
 colnames(FanGraphWar) = as.character(seq(1903:2017))
 
 start.time <- Sys.time()
-for (team in 1:3)
+for (team in 1:30)
 {
-    for(year in 110:115)
+    for(year in 1:115)
     {
         reportedTeamWAR = get_WAR_from_team_year(team, year+1902)
         FanGraphWar[team, year] = reportedTeamWAR
