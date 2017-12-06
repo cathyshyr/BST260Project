@@ -122,9 +122,9 @@ test_pitching <- mapply(cbind, test_pitching, "Year" = years_pitching,
 bbref_batting <- bind_rows(test_batting)
 bbref_pitching <- bind_rows(test_pitching)
 
-setwd("~/Downloads/Baseball Data")
-write.xlsx(bbref_batting, "BBRef_Batting.xlsx")
-write.xlsx(bbref_pitching, "BBRef_Pitching.xlsx")
+#setwd("~/Downloads/Baseball Data")
+#write.xlsx(bbref_batting, "BBRef_Batting.xlsx")
+#write.xlsx(bbref_pitching, "BBRef_Pitching.xlsx")
 
 df_bbref_batting <- read.xlsx("BBRef_Batting.xlsx", na.strings = c("--", ""))
 df_bbref_batting <- df_bbref_batting %>%
@@ -140,5 +140,33 @@ df_bbref_pitching <- df_bbref_pitching %>%
          WAR = as.numeric(WAR),
          Salary = as.numeric(gsub('\\$|,', '', Salary)))
 
+bbref_batting_war <- df_bbref_batting %>%
+  group_by(Team, Year) %>%
+  summarize(sum_war = sum(WAR, na.rm = TRUE)) %>%
+  rename(franchID = Team, yearID = Year)
+
+bbref_pitching_war <- df_bbref_pitching %>%
+  group_by(Team, Year) %>%
+  summarize(sum_war = sum(WAR, na.rm = TRUE)) %>%
+  rename(franchID = Team, yearID = Year)
+  
+
 # save(list_of_batting, list_of_pitching, file = "BBallRef.RData")
 # save.image()
+
+merged_bbref_batting <- Teams %>%
+  mutate(franchID = as.character(franchID)) %>%
+  select(franchID, yearID, W) %>%
+  left_join(bbref_batting_war) %>%
+  mutate(play = "batting")
+
+merged_bbref_pitching <- Teams %>%
+  mutate(franchID = as.character(franchID)) %>%
+  select(franchID, yearID, W) %>%
+  left_join(bbref_pitching_war) %>%
+  mutate(play = "pitching")
+
+merged_bbref <- rbind(merged_bbref_batting, merged_bbref_pitching)
+
+
+write.csv(merged_bbref, "BBReference.csv")
