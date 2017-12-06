@@ -9,21 +9,36 @@ output: html_document
 library(XML)
 library(RCurl)
 library(rlist)
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(broom)
 ```
 
 ### Overview and Motivation
+Provide an overview of the project goals and the motivation for it. Consider that this will be read by people who did not see your project proposal.
 
 ### Related Work
+Anything that inspired you, such as a paper, a web site, or something we discussed in class.
+
+
 
 ### Initial Questions
+What questions are you trying to answer? How did these questions evolve over the course of the project? What new questions did you consider in the course of your analysis?
 
 ### Data
+Source, scraping method, cleanup, etc.
+**Baseball Prospectus**
+**Baseball Reference**
 
-### Exploratory Analysis
-
-### Final Analysis
 
 **Baseball Prospectus**
+
+To calculate WARP, [Baseball Prospectus](http://legacy.baseballprospectus.com/sortable/.) uses three proprietary statistics: Batting Runs Above Replacement (BRAR), Fielding Runs Above Replacement (FRAR), and Pitching Runs Above Replacement (PRAR).
+
+The three numbers are added and divided by the number of runs per win that season, which is another proprietary number. According to [Baseball Reference](https://www.baseball-reference.com/bullpen/Wins_Above_Replacement_Player.), this number is around 10. 
+
+
 
 ```{r Baseball Prospectus, eval = FALSE}
 url_batting <- "http://legacy.baseballprospectus.com/sortable/index.php?cid=2022181"
@@ -53,27 +68,133 @@ prospectus_batting <- do.call(rbind, lapply(1871:2017, prospectus, url = url_bat
 prospectus_pitching <- do.call(rbind, lapply(1871:2017, prospectus, url = url_pitching))
 
 #Reformat data 
+prospectus_pitching <- read.csv("prospectus_pitching_full.csv")
+prospectus_batting <- read.csv("prospectus_batting_full.csv")
+
 prospectus_pitching_small <- prospectus_pitching[, c("NAME", "TEAM", "YEAR", "PWARP")]
-names(prospectus_pitching_small) <- c("Name", "Team", "Year", "WAR")
+names(prospectus_pitching_small) <- c("Name", "Team", "Year", "WARP")
 prospectus_batting_small <- prospectus_batting[, c("NAME", "TEAM", "YEAR", "BWARP")]
-names(prospectus_batting_small) <- c("Name", "Team", "Year", "WAR")
+names(prospectus_batting_small) <- c("Name", "Team", "Year", "WARP")
 ```
 
 ```{r, eval = FALSE}
+# prospectus_pitching <- read_csv("prospectus_batting_full.csv")
+# head(prospectus_pitching_small)
 prospectus <- rbind(prospectus_pitching_small, prospectus_batting_small)
-prospectus$X <- NULL
+head(prospectus)
+#prospectus$X <- NULL
 
 #Calculate year and team specific WAR
 prospectus_team <- prospectus %>% 
   group_by(Team, Year) %>%
-  summarise(WAR = sum(WAR)) %>%
+  summarise(WARP = sum(WARP)) %>%
   rename(franchID = Team, yearID = Year)
 
-#Merge with Lahman's Teams data set to obtain observed wins
 team_sub <- Teams %>%
   select(yearID, franchID, W) 
-prospectus_merge <- left_join(team_sub, prospectus_team, by = c("franchID", "yearID"))
-tail(prospectus_merge)
+
+prospectus_merge <- left_join(prospectus_team, team_sub, by = c("franchID", "yearID"))
+
 #Save dataset 
 write.csv(prospectus_merge, file = "prospectus.csv")
+
+team_sub <- Teams %>%
+  select(yearID, franchID, W)  %>%
+  rename(True = W)
 ```
+
+
+### Exploratory Analysis
+What visualizations did you use to look at your data in different ways? What are the different statistical methods you considered? Justify the decisions you made, and show any major changes to your ideas. How did you reach these conclusions?
+
+#Combine data sets
+
+```{r}
+BBProspectus <- read.csv("prospectus.csv")
+
+BBProspectus <- BBProspectus %>%
+  select(c(-X, -W))
+names(BBProspectus)
+
+# names(BBProspectus)
+# BBProspectus <- prospectus_merge %>%
+#    mutate(source = "Prospectus") %>%
+#    rename(WAR = WARP) %>%
+#    mutate(source = as.factor(source))
+# BBProspectus <- BBProspectus[, c(1, 2, 4, 3, 5)]
+# names(BBProspectus)
+
+BBReference <- read.csv("BBReference.csv")
+BBReference <- BBReference %>%
+  rename(rWAR = WAR) %>%
+  select(c(-X, -source, -W))
+names(BBReference)
+names(BBProspectus)
+names(team_sub)
+
+#Join BB Ref and BB Pros
+RefPros <- inner_join(BBReference, BBProspectus, by = c("franchID", "yearID"))
+
+#Join combined data with observed wins
+RefPros2 <- left_join(RefPros, team_sub, by = c("franchID", "yearID"))
+head(RefPros2)
+
+#Gather into long data format
+RefPros3 <- gather(RefPros2, source, WAR, -c(franchID, yearID))
+```
+
+
+```{r}
+a <- RefPros3 %>%
+  group_by(yearID, source) %>%
+  summarize(sumWAR = sum(WAR))
+
+a %>%
+  ggplot(aes(x = yearID, y = sumWAR, group = source)) + 
+  geom_line(aes(color = source))
+```
+
+
+
+```{r}
+RefPros2 %>%
+  group_by(source) %>%
+  do(tidy(lm(W ~ WAR, data = .), conf.int = TRUE))
+
+m1 <- lm(True ~ rWAR, data = RefPros2)
+m2 <- lm(True ~ WARP, data = RefPros2)
+pred <- predict(m1, newdata = RefPros2)
+pred2 <- predict(m2, newdata = RefPros2)
+
+df_predRef <- cbind(RefPros2, rWARpred = pred)
+a2 <- df_predRef %>%
+  group_by(yearID) %>%
+  summarize(sum.rWARpred = sum(rWARpred))
+
+df_predPros <- cbind(RefPros2, WARPpred = pred2)
+a3 <- df_predPros %>%
+  group_by(yearID) %>%
+  summarize(sum.WARPpred = sum(WARPpred))
+
+p <- ggplot() + 
+  geom_line(data = a, aes(x = yearID, y = sumWAR, group = source, color = source)) +
+  geom_line(data = a2, aes(x = yearID, y = sum.rWARpred, color = "Pred")) + 
+  geom_line(data = a3, aes(x = yearID, y = sum.WARPpred, color = "Bad Pred"))
+
+df %>%
+  ggplot(aes(x = yearID, y = sumW, color = "Wins")) +
+  geom_line() +
+  geom_line(aes(x = yearID, y = sumrWAR, color = "Baseball Reference")) +
+  geom_line(aes(x = yearID, y = sumWARP, color = "Baseball Prospectus")) +
+
+RMSE <- function(true_ratings, predicted_ratings){
+    sqrt(mean((true_ratings - predicted_ratings)^2))
+  }
+
+RMSE(df$sumW, a2$sum.rWARpred)
+RMSE(df$sumW, a3$sum.WARPpred)
+```
+
+### Final Analysis
+What did you learn about the data? How did you answer the questions? How can you justify your answers?
+
