@@ -122,9 +122,7 @@ test_pitching <- mapply(cbind, test_pitching, "Year" = years_pitching,
 bbref_batting <- bind_rows(test_batting)
 bbref_pitching <- bind_rows(test_pitching)
 
-#setwd("~/Downloads/Baseball Data")
-#write.xlsx(bbref_batting, "BBRef_Batting.xlsx")
-#write.xlsx(bbref_pitching, "BBRef_Pitching.xlsx")
+
 
 df_bbref_batting <- read.xlsx("BBRef_Batting.xlsx", na.strings = c("--", ""))
 df_bbref_batting <- df_bbref_batting %>%
