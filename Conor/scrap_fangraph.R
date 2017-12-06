@@ -128,3 +128,5 @@ FGW$SFG = FGW$V30
 library(Lahman)
 keeps = tail(Teams$franchID, n = 30)
 FGW = FGW[, (names(FGW) %in% keeps)]
+
+write.csv(FGW, "FanGraphWARs.csv")
