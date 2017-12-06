@@ -66,8 +66,14 @@ prospectus$X <- NULL
 #Calculate year and team specific WAR
 prospectus_team <- prospectus %>% 
   group_by(Team, Year) %>%
-  summarise(WAR = sum(WAR))
+  summarise(WAR = sum(WAR)) %>%
+  rename(franchID = Team, yearID = Year)
 
-#save dataset 
-write.csv(prospectus_team, file = "prospectus.csv")
+#Merge with Lahman's Teams data set to obtain observed wins
+team_sub <- Teams %>%
+  select(yearID, franchID, W) 
+prospectus_merge <- left_join(team_sub, prospectus_team, by = c("franchID", "yearID"))
+tail(prospectus_merge)
+#Save dataset 
+write.csv(prospectus_merge, file = "prospectus.csv")
 ```
