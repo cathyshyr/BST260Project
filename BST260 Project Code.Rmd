@@ -60,11 +60,14 @@ names(prospectus_batting_small) <- c("Name", "Team", "Year", "WAR")
 ```
 
 ```{r, eval = FALSE}
-#Save as .csv
 prospectus <- rbind(prospectus_pitching_small, prospectus_batting_small)
-write.csv(prospectus, file = "prospectus.csv")
-
-prospectus <- read.csv("prospectus.csv", header = TRUE)
 prospectus$X <- NULL
-head(prospectus)
+
+#Calculate year and team specific WAR
+prospectus_team <- prospectus %>% 
+  group_by(Team, Year) %>%
+  summarise(WAR = sum(WAR))
+
+#save dataset 
+write.csv(prospectus_team, file = "prospectus.csv")
 ```
