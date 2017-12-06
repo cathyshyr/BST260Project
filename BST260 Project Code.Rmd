@@ -13,6 +13,13 @@ library(readr)
 library(tidyverse)
 library(dplyr)
 library(broom)
+library(Lahman)
+
+
+RMSE <- function(Truth_ratings, predicted_ratings){
+    sqrt(mean((Truth_ratings - predicted_ratings)^2, na.rm = TRUE))
+  }
+
 ```
 
 ### Overview and Motivation
@@ -59,7 +66,7 @@ prospectus <- function(year, url){
   dat <- d %>%
     html_nodes("table") %>%
     .[[5]] %>%
-    html_table(header = TRUE)
+    html_table(header = Truth)
   dat
 }
 
@@ -97,10 +104,6 @@ prospectus_merge <- left_join(prospectus_team, team_sub, by = c("franchID", "yea
 
 #Save dataset 
 write.csv(prospectus_merge, file = "prospectus.csv")
-
-team_sub <- Teams %>%
-  select(yearID, franchID, W)  %>%
-  rename(True = W)
 ```
 
 
@@ -109,91 +112,85 @@ What visualizations did you use to look at your data in different ways? What are
 
 #Combine data sets
 
-```{r}
+```{r, warning = FALSE, message = FALSE}
+#Read in BBProspectus data and remove extraneous columns
 BBProspectus <- read.csv("prospectus.csv")
-
 BBProspectus <- BBProspectus %>%
   select(c(-X, -W))
 names(BBProspectus)
 
-# names(BBProspectus)
-# BBProspectus <- prospectus_merge %>%
-#    mutate(source = "Prospectus") %>%
-#    rename(WAR = WARP) %>%
-#    mutate(source = as.factor(source))
-# BBProspectus <- BBProspectus[, c(1, 2, 4, 3, 5)]
-# names(BBProspectus)
-
+#Read in BBProspectus data and remove extraneous columns
 BBReference <- read.csv("BBReference.csv")
 BBReference <- BBReference %>%
   rename(rWAR = WAR) %>%
   select(c(-X, -source, -W))
-names(BBReference)
-names(BBProspectus)
-names(team_sub)
 
-#Join BB Ref and BB Pros
-RefPros <- inner_join(BBReference, BBProspectus, by = c("franchID", "yearID"))
 
-#Join combined data with observed wins
-RefPros2 <- left_join(RefPros, team_sub, by = c("franchID", "yearID"))
-head(RefPros2)
+#Inner join BB Ref and BB Pros for a complete data set
+data <- inner_join(BBReference, BBProspectus, by = c("franchID", "yearID"))
+
+#Join combined data with true number of wins in Lahman's dataset to create wide data set 
+team_sub <- Teams %>%
+  select(yearID, franchID, W)  %>%
+  rename(Truth = W)
+data_wide <- left_join(data, team_sub, by = c("franchID", "yearID"))
 
 #Gather into long data format
-RefPros3 <- gather(RefPros2, source, WAR, -c(franchID, yearID))
+data_long <- gather(data_wide, source, WAR, -c(franchID, yearID))
 ```
 
 
-```{r}
-a <- RefPros3 %>%
+#How well does WAR compare to the true number of wins?
+
+```{r, warning = FALSE}
+data_sum <- data_long %>%
   group_by(yearID, source) %>%
   summarize(sumWAR = sum(WAR))
 
-a %>%
+data_sum %>%
   ggplot(aes(x = yearID, y = sumWAR, group = source)) + 
   geom_line(aes(color = source))
 ```
 
+From this plot, it appears that both rWAR and WARP capture the trend of true wins over time. However, there is a substantial bias because both WAR statistics are hugely underestimating the truth. 
 
+Next, let's build a naive model to capture the effect of WAR on predicting the truth for each of the 3 WAR statistics. 
 
-```{r}
-RefPros2 %>%
-  group_by(source) %>%
-  do(tidy(lm(W ~ WAR, data = .), conf.int = TRUE))
+```{r, warning = FALSE, message = FALSE}
+#Linear regression for rWAR and WARP, respectively
+m1 <- lm(Truth ~ rWAR, data = data_wide)
+m2 <- lm(Truth ~ WARP, data = data_wide)
 
-m1 <- lm(True ~ rWAR, data = RefPros2)
-m2 <- lm(True ~ WARP, data = RefPros2)
-pred <- predict(m1, newdata = RefPros2)
-pred2 <- predict(m2, newdata = RefPros2)
+#Make predictions based on model fit
+pred <- predict(m1, newdata = data_wide)
+pred2 <- predict(m2, newdata = data_wide)
 
-df_predRef <- cbind(RefPros2, rWARpred = pred)
+#Wrangle data for plotting
+df_predRef <- cbind(data_wide, rWARpred = pred)
 a2 <- df_predRef %>%
   group_by(yearID) %>%
   summarize(sum.rWARpred = sum(rWARpred))
 
-df_predPros <- cbind(RefPros2, WARPpred = pred2)
+df_predPros <- cbind(data_wide, WARPpred = pred2)
 a3 <- df_predPros %>%
   group_by(yearID) %>%
   summarize(sum.WARPpred = sum(WARPpred))
 
 p <- ggplot() + 
-  geom_line(data = a, aes(x = yearID, y = sumWAR, group = source, color = source)) +
-  geom_line(data = a2, aes(x = yearID, y = sum.rWARpred, color = "Pred")) + 
-  geom_line(data = a3, aes(x = yearID, y = sum.WARPpred, color = "Bad Pred"))
+  geom_line(data = data_sum, aes(x = yearID, y = sumWAR, group = source, color = source)) +
+  geom_line(data = a2, aes(x = yearID, y = sum.rWARpred, color = "BB Ref Pred")) + 
+  geom_line(data = a3, aes(x = yearID, y = sum.WARPpred, color = "BB Pros Pred"))
+p
 
-df %>%
-  ggplot(aes(x = yearID, y = sumW, color = "Wins")) +
-  geom_line() +
-  geom_line(aes(x = yearID, y = sumrWAR, color = "Baseball Reference")) +
-  geom_line(aes(x = yearID, y = sumWARP, color = "Baseball Prospectus")) +
+a <- data_wide %>%
+  group_by(yearID) %>%
+  summarize(sumW = sum(Truth))
 
-RMSE <- function(true_ratings, predicted_ratings){
-    sqrt(mean((true_ratings - predicted_ratings)^2))
-  }
-
-RMSE(df$sumW, a2$sum.rWARpred)
-RMSE(df$sumW, a3$sum.WARPpred)
+RMSE(a$sumW, a2$sum.rWARpred)
+RMSE(a$sumW, a3$sum.WARPpred)
 ```
+
+According to RMSE, `rWAR` is a better predictor of `WARP`. However, we can definitely improve upon the naive model, since we did not account for the substructure within our data, e.g. team effect, team x year interaction effect, etc. 
 
 ### Final Analysis
 What did you learn about the data? How did you answer the questions? How can you justify your answers?
