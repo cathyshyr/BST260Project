@@ -47,7 +47,6 @@ for (team in colnames(FGWAR))
             FanGraphWARs = rbind(FanGraphWARs , tmp)
         }
     }
-    
 }
 
 
