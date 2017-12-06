@@ -49,5 +49,6 @@ for (team in colnames(FGWAR))
     }
 }
 
+write.csv(FanGraphWARs, "FanGraphWARs_better_format.csv")
 
 
