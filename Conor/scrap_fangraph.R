@@ -1,30 +1,5 @@
 setwd("/Users/Conor/Documents/BST\ 260/Project/BST260Project/Conor")
 
-year = 2016
-team_num=9
-
-teams = seq(1, 30, 1)
-
-sapply(teams, get_WAR_from_team_year, year=2016)
-
-FanGraphWar = matrix(nrow=30, ncol= 115)
-colnames(FanGraphWar) = as.character(seq(1903:2017))
-
-start.time <- Sys.time()
-for (team in 1:30)
-{
-    for(year in 1:115)
-    {
-        reportedTeamWAR = get_WAR_from_team_year(team, year+1902)
-        FanGraphWar[team, year] = reportedTeamWAR
-        print(reportedTeamWAR)
-    }
-    
-}
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-time.taken
-
 
 get_WAR_from_team_year=function(team, year)
 {   
@@ -93,3 +68,63 @@ split_string_on_gele = function(string)
 {
     matrix(strsplit(string, "[><]"))[[1]]
 }
+
+
+
+FanGraphWar = matrix(nrow=30, ncol= 115)
+
+
+start.time <- Sys.time()
+for (team in 30:30)
+{
+    for(year in 1:115)
+    {
+        reportedTeamWAR = get_WAR_from_team_year(team, year+1902)
+        FanGraphWar[team, year] = reportedTeamWAR
+        print(paste(reportedTeamWAR, team, year))
+    }
+    
+}
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken
+
+
+FGW = as.data.frame(t(FanGraphWar))
+
+
+
+FGW$ANA = FGW$V1 
+FGW$BAL = FGW$V2 
+FGW$BOS = FGW$V3 
+FGW$CHW = FGW$V4 
+FGW$CLE = FGW$V5 
+FGW$DET = FGW$V6
+FGW$KCR = FGW$V7 
+FGW$MIN = FGW$V8 
+FGW$NYY = FGW$V9 
+FGW$OAK = FGW$V10 
+FGW$SEA = FGW$V11 
+FGW$TBD = FGW$V12 
+FGW$TEX = FGW$V13 
+FGW$TOR = FGW$V14 
+FGW$ARI = FGW$V15 
+FGW$ATL = FGW$V16 
+FGW$CHC = FGW$V17 
+FGW$CIN = FGW$V18 
+FGW$COL = FGW$V19 
+FGW$FLA = FGW$V20 
+FGW$HOU = FGW$V21 
+FGW$LAD = FGW$V22 
+FGW$MIL = FGW$V23
+FGW$WSN = FGW$V24 
+FGW$NYM = FGW$V25 
+FGW$PHI = FGW$V26
+FGW$PIT = FGW$V27 
+FGW$STL = FGW$V28 
+FGW$SDP = FGW$V29 
+FGW$SFG = FGW$V30
+
+library(Lahman)
+keeps = tail(Teams$franchID, n = 30)
+FGW = FGW[, (names(FGW) %in% keeps)]
