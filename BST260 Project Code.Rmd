@@ -87,11 +87,10 @@ prospectus_batting_small <- prospectus_batting[, c("NAME", "TEAM", "YEAR", "BWAR
 names(prospectus_batting_small) <- c("Name", "Team", "Year", "WARP")
 ```
 
-```{r, eval = FALSE}
+```{r, eval = FALSE, echo = FALSE}
 # prospectus_pitching <- read_csv("prospectus_batting_full.csv")
 # head(prospectus_pitching_small)
 prospectus <- rbind(prospectus_pitching_small, prospectus_batting_small)
-head(prospectus)
 #prospectus$X <- NULL
 
 #Calculate year and team specific WAR
@@ -120,7 +119,6 @@ What visualizations did you use to look at your data in different ways? What are
 BBProspectus <- read.csv("prospectus.csv")
 BBProspectus <- BBProspectus %>%
   select(c(-X, -W))
-names(BBProspectus)
 
 #Read in BBProspectus data and remove extraneous columns
 BBReference <- read.csv("BBReference.csv")

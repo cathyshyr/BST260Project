@@ -181,25 +181,6 @@ prospectus_pitching_small &lt;- prospectus_pitching[, c(&quot;NAME&quot;, &quot;
 names(prospectus_pitching_small) &lt;- c(&quot;Name&quot;, &quot;Team&quot;, &quot;Year&quot;, &quot;WARP&quot;)
 prospectus_batting_small &lt;- prospectus_batting[, c(&quot;NAME&quot;, &quot;TEAM&quot;, &quot;YEAR&quot;, &quot;BWARP&quot;)]
 names(prospectus_batting_small) &lt;- c(&quot;Name&quot;, &quot;Team&quot;, &quot;Year&quot;, &quot;WARP&quot;)</code></pre>
-<pre class="r"><code># prospectus_pitching &lt;- read_csv(&quot;prospectus_batting_full.csv&quot;)
-# head(prospectus_pitching_small)
-prospectus &lt;- rbind(prospectus_pitching_small, prospectus_batting_small)
-head(prospectus)
-#prospectus$X &lt;- NULL
-
-#Calculate year and team specific WAR
-prospectus_team &lt;- prospectus %&gt;% 
-  group_by(Team, Year) %&gt;%
-  summarise(WARP = sum(WARP)) %&gt;%
-  rename(franchID = Team, yearID = Year)
-
-team_sub &lt;- Teams %&gt;%
-  select(yearID, franchID, W) 
-
-prospectus_merge &lt;- left_join(prospectus_team, team_sub, by = c(&quot;franchID&quot;, &quot;yearID&quot;))
-
-#Save dataset 
-write.csv(prospectus_merge, file = &quot;prospectus.csv&quot;)</code></pre>
 </div>
 <div id="exploratory-analysis" class="section level3">
 <h3>Exploratory Analysis</h3>
@@ -210,9 +191,8 @@ write.csv(prospectus_merge, file = &quot;prospectus.csv&quot;)</code></pre>
 BBProspectus &lt;- read.csv(&quot;prospectus.csv&quot;)
 BBProspectus &lt;- BBProspectus %&gt;%
   select(c(-X, -W))
-names(BBProspectus)</code></pre>
-<pre><code>## [1] &quot;franchID&quot; &quot;yearID&quot;   &quot;WARP&quot;</code></pre>
-<pre class="r"><code>#Read in BBProspectus data and remove extraneous columns
+
+#Read in BBProspectus data and remove extraneous columns
 BBReference &lt;- read.csv(&quot;BBReference.csv&quot;)
 BBReference &lt;- BBReference %&gt;%
   rename(rWAR = WAR) %&gt;%
