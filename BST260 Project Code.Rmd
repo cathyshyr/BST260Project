@@ -35,16 +35,19 @@ What questions are you trying to answer? How did these questions evolve over the
 
 ### Data
 Source, scraping method, cleanup, etc.
-**Baseball Prospectus**
-**Baseball Reference**
-
 
 **Baseball Prospectus**
 
-To calculate WARP, [Baseball Prospectus](http://legacy.baseballprospectus.com/sortable/.) uses three proprietary statistics: Batting Runs Above Replacement (BRAR), Fielding Runs Above Replacement (FRAR), and Pitching Runs Above Replacement (PRAR).
+To calculate `WARP`, [Baseball Prospectus](http://legacy.baseballprospectus.com/sortable/.) uses three proprietary statistics: Batting Runs Above Replacement (BRAR), Fielding Runs Above Replacement (FRAR), and Pitching Runs Above Replacement (PRAR).
 
 The three numbers are added and divided by the number of runs per win that season, which is another proprietary number. According to [Baseball Reference](https://www.baseball-reference.com/bullpen/Wins_Above_Replacement_Player.), this number is around 10. 
 
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/scrape_prospectus.png)
+
+
+Baseball Prospectus provides player, team, and year-specific WAR statistics. Data (as shown above) are displayed annually from 1871 to 2017 with a drop down menu for user selection. 
+
+To scrape year-specific data, we vectorized over the range of years and used the function `set_values` and `submit_form` to automate the selection process and extracted the table of interest by identifying the corresponding `html_node`. 
 
 
 ```{r Baseball Prospectus, eval = FALSE}
@@ -110,7 +113,7 @@ write.csv(prospectus_merge, file = "prospectus.csv")
 ### Exploratory Analysis
 What visualizations did you use to look at your data in different ways? What are the different statistical methods you considered? Justify the decisions you made, and show any major changes to your ideas. How did you reach these conclusions?
 
-#Combine data sets
+####Combine data sets
 
 ```{r, warning = FALSE, message = FALSE}
 #Read in BBProspectus data and remove extraneous columns
@@ -140,23 +143,26 @@ data_long <- gather(data_wide, source, WAR, -c(franchID, yearID))
 ```
 
 
-#How well does WAR compare to the true number of wins?
+####How well does WAR compare to the true number of wins?
 
-```{r, warning = FALSE}
+```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
 data_sum <- data_long %>%
   group_by(yearID, source) %>%
   summarize(sumWAR = sum(WAR))
 
 data_sum %>%
   ggplot(aes(x = yearID, y = sumWAR, group = source)) + 
-  geom_line(aes(color = source))
+  geom_line(aes(color = source)) +
+  ggtitle("Number of Wins vs. Wins by Replacement (WAR) by Year") +
+  xlab("Year") +
+  ylab("Number of Wins")
 ```
 
-From this plot, it appears that both rWAR and WARP capture the trend of true wins over time. However, there is a substantial bias because both WAR statistics are hugely underestimating the truth. 
+From this plot, it appears that both `rWAR` and `WARP` capture the trend of true wins over time. However, there is a substantial bias because both WAR statistics are hugely underestimating the truth. 
 
 Next, let's build a naive model to capture the effect of WAR on predicting the truth for each of the 3 WAR statistics. 
 
-```{r, warning = FALSE, message = FALSE}
+```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
 #Linear regression for rWAR and WARP, respectively
 m1 <- lm(Truth ~ rWAR, data = data_wide)
 m2 <- lm(Truth ~ WARP, data = data_wide)
@@ -177,10 +183,14 @@ a3 <- df_predPros %>%
   summarize(sum.WARPpred = sum(WARPpred))
 
 p <- ggplot() + 
-  geom_line(data = data_sum, aes(x = yearID, y = sumWAR, group = source, color = source)) +
-  geom_line(data = a2, aes(x = yearID, y = sum.rWARpred, color = "BB Ref Pred")) + 
-  geom_line(data = a3, aes(x = yearID, y = sum.WARPpred, color = "BB Pros Pred"))
+  geom_line(data = data_sum[data_sum$source == "Truth", ], aes(x = yearID, y = sumWAR, group = source, color = source)) +
+  geom_line(data = a2, aes(x = yearID, y = sum.rWARpred, color = "rWAR Pred")) + 
+  geom_line(data = a3, aes(x = yearID, y = sum.WARPpred, color = "WARP Pred")) + 
+  ggtitle("Number of Wins vs. Fitted Values from Naive Model by Year") +
+  xlab("Year") +
+  ylab("Number of Wins")
 p
+
 
 a <- data_wide %>%
   group_by(yearID) %>%
@@ -190,7 +200,7 @@ RMSE(a$sumW, a2$sum.rWARpred)
 RMSE(a$sumW, a3$sum.WARPpred)
 ```
 
-According to RMSE, `rWAR` is a better predictor of `WARP`. However, we can definitely improve upon the naive model, since we did not account for the substructure within our data, e.g. team effect, team x year interaction effect, etc. 
+According to RMSE, `rWAR` is a better predictor of `WARP`. However, we can definitely improve upon the naive model by accounting for the substructure within our data, e.g. team effect, team x year interaction effect, etc. 
 
 ### Final Analysis
 What did you learn about the data? How did you answer the questions? How can you justify your answers?
