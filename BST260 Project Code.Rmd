@@ -298,7 +298,7 @@ team_sub <- Teams %>%
 data_wide <- left_join(data, team_sub, by = c("franchID", "yearID"))
 
 data_wide = data_wide %>%
-    mutate(BRefWAR = BRefWAR + Games/3, FanGraphWAR = FanGraphWAR + Games/3) %>%
+    mutate(BRefWAR = BRefWAR + Games/3, FanGraphWAR = FanGraphWAR + Games * 0.294) %>%
     rename(BRefPred = BRefWAR, FanGraphPred = FanGraphWAR)#Do BBProspectus separately because of 0's
 
 data_wide = data_wide %>%
@@ -317,7 +317,28 @@ data_long <- gather(data_wide, source, WAR, -c(franchID, yearID)) ##TODO do we n
 ```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
 
 RMSE(data_wide$Truth, data_wide$FanGraphPred)
-RMSE(data_wide$Truth, data_wide$BRefPred)
+RMSE(data_wide$Truth[data_wide$yearID >= 1949], data_wide$BBproPred[data_wide$yearID >= 1949]) #only have data for these years
+
+
+FG_diff = data_wide$FanGraphPred - data_wide$Truth
+mean(FG_diff)
+median(FG_diff)
+sd(FG_diff)
+
+BBP_diff = data_wide$BBproPred[data_wide$yearID >= 1949] - data_wide$Truth[data_wide$yearID >= 1949]
+mean(BBP_diff)
+median(BBP_diff)
+sd(BBP_diff)
+
+#TODO make these ggplot, keep dim the same across graphs (or do overlapping graphs)
+hist(FG_diff)
+hist(BBP_diff)  
+
+data_wide %>% ggplot(aes(x = Truth, y = FanGraphPred)) +  
+    geom_point(color="blue", size = 1) +
+    geom_abline(slope = 1, intercept = 0) 
+
+lm(Truth ~ FanGraphPred, data = data_wide)
 
 data_sum <- data_long %>%
   group_by(yearID, source) %>%
