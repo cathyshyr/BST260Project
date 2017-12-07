@@ -255,23 +255,37 @@ What visualizations did you use to look at your data in different ways? What are
 #Read in BBProspectus data and remove extraneous columns
 BBProspectus <- read.csv("prospectus.csv")
 BBProspectus <- BBProspectus %>%
-  select(c(-X, -W))
+    rename(BBproWAR = WARP) %>%
+    select(c(-X, -W))
 
 #Read in BBProspectus data and remove extraneous columns
 BBReference <- read.csv("BBReference.csv")
 BBReference <- BBReference %>%
-  rename(rWAR = WAR) %>%
+  rename(BRefWAR = WAR) %>%
   select(c(-X, -source, -W))
 
+FanGraphs <- read.csv("Conor/FanGraphWARs_better_format.csv")
+FanGraphs <- FanGraphs %>%
+    rename(FanGraphWAR = WAR, yearID=year) %>%
+    select(c(-X))
 
-#Inner join BB Ref and BB Pros for a complete data set
+
+#Inner join the three for a complete data set
 data <- inner_join(BBReference, BBProspectus, by = c("franchID", "yearID"))
+data = inner_join(data, FanGraphs, by =c("franchID", "yearID"))
 
 #Join combined data with true number of wins in Lahman's dataset to create wide data set 
 team_sub <- Teams %>%
-  select(yearID, franchID, W)  %>%
-  rename(Truth = W)
+  select(yearID, franchID, W, G)  %>%
+  rename(Truth = W, Games = G)
 data_wide <- left_join(data, team_sub, by = c("franchID", "yearID"))
+
+data_wide = data_wide %>%
+    mutate(BRefWAR = BRefWAR + Games/3, FanGraphWAR = FanGraphWAR + Games/3) #Do BBProspectus separately because of 0's
+
+data_wide = data_wide %>%
+    filter(BBproWAR != 0) %>%
+    mutate(BBproWAR = BBproWAR + Games/3)
 
 #Gather into long data format
 data_long <- gather(data_wide, source, WAR, -c(franchID, yearID))
