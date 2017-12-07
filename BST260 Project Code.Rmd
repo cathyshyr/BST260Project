@@ -23,9 +23,10 @@ RMSE <- function(Truth_ratings, predicted_ratings){
 ```
 
 ### Overview and Motivation
-Provide an overview of the project goals and the motivation for it. Consider that this will be read by people who did not see your project proposal.
+Sabermetrics has become quite popular, especially in more recent years. Researchers have developed metrics that are widely used to gauge and predict player performance. The search for more reliable and accurate measures is still ongoing. We will begin our search by analyzing and comparing an increasingly popular but not officially recognized metric: *wins above replacement* (WAR). There is no universal way of calculating WAR, so we assess its accuracy across three different sources. In doing so, we also aim to derive a more "comprehensive" metric, perhaps one that is a combination of the three to improve results.
 
 ### Related Work
+
 Anything that inspired you, such as a paper, a web site, or something we discussed in class.
 
 
