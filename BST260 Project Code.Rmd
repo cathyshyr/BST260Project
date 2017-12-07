@@ -255,8 +255,25 @@ What visualizations did you use to look at your data in different ways? What are
 #Read in BBProspectus data and remove extraneous columns
 BBProspectus <- read.csv("prospectus.csv")
 BBProspectus <- BBProspectus %>%
-    rename(BBproWAR = WARP) %>%
+    rename(BBproWAR = WARP, teamID = franchID) %>%
     select(c(-X, -W))
+
+#Baseball Prospectus had some funny names, so first we need to align them with our other datasets using Lahman
+BBProspectus$franchID = NA
+
+BBProspectus = BBProspectus %>%
+    filter(yearID >= 1903)
+
+for (i in 1:length(bbp_sub[, 1]))
+{
+
+    BBProspectus[i, ]$franchID = 
+        as.character(unique(
+            Teams$franchID[as.character(Teams$teamID) == as.character(BBProspectus[i, ]$teamID)])[1])
+}    
+
+BBProspectus = BBProspectus %>%
+    select(c(-teamID))
 
 #Read in BBProspectus data and remove extraneous columns
 BBReference <- read.csv("BBReference.csv")
