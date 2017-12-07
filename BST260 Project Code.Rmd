@@ -281,20 +281,27 @@ team_sub <- Teams %>%
 data_wide <- left_join(data, team_sub, by = c("franchID", "yearID"))
 
 data_wide = data_wide %>%
-    mutate(BRefWAR = BRefWAR + Games/3, FanGraphWAR = FanGraphWAR + Games/3) #Do BBProspectus separately because of 0's
+    mutate(BRefWAR = BRefWAR + Games/3, FanGraphWAR = FanGraphWAR + Games/3) %>%
+    rename(BRefPred = BRefWAR, FanGraphPred = FanGraphWAR)#Do BBProspectus separately because of 0's
 
 data_wide = data_wide %>%
     filter(BBproWAR != 0) %>%
-    mutate(BBproWAR = BBproWAR + Games/3)
+    mutate(BBproWAR = BBproWAR + Games/3) %>%
+    rename(BBproPred = BBproWAR)
 
 #Gather into long data format
-data_long <- gather(data_wide, source, WAR, -c(franchID, yearID))
+data_long <- gather(data_wide, source, WAR, -c(franchID, yearID)) ##TODO do we need this? -Conor
+
 ```
 
 
 ####How well does WAR compare to the true number of wins?
 
 ```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
+
+RMSE(data_wide$Truth, data_wide$FanGraphPred)
+RMSE(data_wide$Truth, data_wide$BRefPred)
+
 data_sum <- data_long %>%
   group_by(yearID, source) %>%
   summarize(sumWAR = sum(WAR))
