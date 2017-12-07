@@ -155,3 +155,72 @@ merged_bbref <- Teams %>%
 
 
 write.csv(merged_bbref, "BBReference.csv")
+
+
+##### RERUNNING CODE TO RETRIEVE DATA FOR MISSING TEAMS #####
+teams <- "CAL"
+years <- 1961:1996
+list_of_batting_CAL <- list()
+list_of_pitching_CAL <- list()
+
+urls <- rep(0, length(years))
+for(j in 1:length(years)) {
+    urls[j] <- paste0("https://www.baseball-reference.com/teams/", teams, "/", years[j], ".shtml")
+}
+
+for(i in 1:length(urls)) {
+  url <- urls[i]
+  
+  res <- try(readLines(url), silent = TRUE)
+  
+  ## check if website exists
+  if(inherits(res, "try-error")) {
+    list_of_batting_CAL[[i]] <- NA
+    list_of_pitching_CAL[[i]] <- NA
+  }
+  else {
+    urltxt <- readLines(url)
+    urltxt <- gsub("-->", "", gsub("<!--", "", urltxt))
+    doc <- htmlParse(urltxt)
+    tables_full <- readHTMLTable(doc)
+    tmp1 <- tables_full$players_value_batting
+    tmp2 <- tables_full$players_value_pitching
+    list_of_batting_CAL[[i]] <- tmp1
+    list_of_pitching_CAL[[i]] <- tmp2
+  }
+  print(i)
+  closeAllConnections()
+}
+
+## find indices where the link exists
+ind_batting <- which(!is.na(list_of_batting_CAL))
+ind_pitching <- which(!is.na(list_of_batting_CAL))
+
+## find links that exist
+url_batting <- urls[ind_batting]
+url_pitching <- urls[ind_pitching]
+
+## extract year from each url
+years_batting <- as.numeric(unlist(regmatches(url_batting, gregexpr("[[:digit:]]+", url_batting))))
+years_pitching <- as.numeric(unlist(regmatches(url_pitching, gregexpr("[[:digit:]]+", url_pitching))))
+
+## extract team from each url
+teams_batting <- basename(dirname(url_batting))
+teams_pitching <- basename(dirname(url_pitching))
+
+## remove NAs from lists
+na.omit.list <- function(y) { 
+  return(y[!sapply(y, function(x) all(is.na(x)))]) 
+}
+
+test_batting <- na.omit.list(list_of_batting_CAL)
+test_pitching <- na.omit.list(list_of_pitching_CAL)
+
+## add columns for year and team
+test_batting <- mapply(cbind, test_batting, "Year" = years_batting, 
+                       "Team" = teams_batting, SIMPLIFY = F)
+test_pitching <- mapply(cbind, test_pitching, "Year" = years_pitching,
+                        "Team" = teams_pitching, SIMPLIFY = F)
+
+bbref_batting <- bind_rows(test_batting)
+bbref_pitching <- bind_rows(test_pitching)
