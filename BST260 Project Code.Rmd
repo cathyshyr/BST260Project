@@ -99,6 +99,8 @@ $$
 
 Data are provided for each team in different years. Separate tables are displayed for batters and pitchers. The screenshot above provides an example of one of the tables shown for the New York Yankees in 2017. 
 
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/baseballref_screencap.png)
+
 Links to these tables follow a general pattern, so a vector of all the possible links was created. We then looped through all of these links to grab the tables from each page. Final touches were made to get the datasets into the right format.
 
 ```{r Baseball Reference, eval = FALSE}
