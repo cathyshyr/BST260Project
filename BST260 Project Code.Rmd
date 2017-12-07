@@ -264,7 +264,7 @@ BBProspectus$franchID = NA
 BBProspectus = BBProspectus %>%
     filter(yearID >= 1903)
 
-for (i in 1:length(bbp_sub[, 1]))
+for (i in 1:length(BBProspectus[, 1]))
 {
 
     BBProspectus[i, ]$franchID = 
