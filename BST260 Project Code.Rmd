@@ -16,7 +16,7 @@ library(broom)
 library(Lahman)
 
 
-RMSE <- function(Truth_ratings, predicted_ratings){
+MSE <- function(Truth_ratings, predicted_ratings){
     sqrt(mean((Truth_ratings - predicted_ratings)^2, na.rm = TRUE))
   }
 
@@ -273,11 +273,11 @@ BBProspectus <- BBProspectus %>%
 BBProspectus$franchID = NA
 
 BBProspectus = BBProspectus %>%
-    filter(yearID >= 1903)
+    filter(yearID >= 1949)
 
 for (i in 1:length(BBProspectus[, 1]))
 {
-
+    
     BBProspectus[i, ]$franchID = 
         as.character(unique(
             Teams$franchID[as.character(Teams$teamID) == as.character(BBProspectus[i, ]$teamID)])[1])
@@ -289,14 +289,27 @@ BBProspectus = BBProspectus %>%
 #Read in BBProspectus data and remove extraneous columns
 BBReference <- read.csv("BBReference.csv")
 BBReference <- BBReference %>%
-  rename(BRefWAR = WAR) %>%
-  select(c(-X, -source, -W))
+    filter(yearID >= 1949) %>%
+    rename(BRefWAR = WAR) %>%
+    select(c(-X, -source, -W))
+
+BBReference = BBReference[!is.na(BBReference$BRefWAR), ]
+#Baseball Reference Team IDs are based on the team of that year, need to correct this for a few teams
+alts = c("LAA", "CAL", "TBR", "MIA", "PHA")
+delt = c("ANA", "ANA", "TBD", "FLA", "OAK")
+
+for (i in 1:length(BBReference[, 1]))
+{
+    if ((BBReference[i, ]$franchID %in% alts))
+    {
+        BBReference[i, ]$franchID =  delt[match(BBReference[i, ]$franchID, alts)]
+    }
+}
 
 FanGraphs <- read.csv("Conor/FanGraphWARs_better_format.csv")
 FanGraphs <- FanGraphs %>%
     rename(FanGraphWAR = WAR, yearID=year) %>%
     select(c(-X))
-
 
 #Inner join the three for a complete data set
 data <- inner_join(BBReference, BBProspectus, by = c("franchID", "yearID"))
@@ -304,20 +317,15 @@ data = inner_join(data, FanGraphs, by =c("franchID", "yearID"))
 
 #Join combined data with true number of wins in Lahman's dataset to create wide data set 
 team_sub <- Teams %>%
-  select(yearID, franchID, W, G)  %>%
-  rename(Truth = W, Games = G)
+    select(yearID, franchID, W, G)  %>%
+    rename(Truth = W, Games = G)
 data_wide <- left_join(data, team_sub, by = c("franchID", "yearID"))
 
 data_wide = data_wide %>%
-    mutate(BRefWAR = BRefWAR + Games/3, FanGraphWAR = FanGraphWAR + Games * 0.294) %>%
-    rename(BRefPred = BRefWAR, FanGraphPred = FanGraphWAR)#Do BBProspectus separately because of 0's
+    filter(yearID %in% 1949:2016) %>%
+    mutate(BRefWAR = BRefWAR + Games * 0.294, FanGraphWAR = FanGraphWAR + Games * 0.294, BBproWAR = BBproWAR + Games*0.320) %>%
+    rename(BRefPred = BRefWAR, FanGraphPred = FanGraphWAR, BBproPred = BBproWAR)
 
-data_wide = data_wide %>%
-    filter(BBproWAR != 0) %>%
-    mutate(BBproWAR = BBproWAR + Games/3) %>%
-    rename(BBproPred = BBproWAR)
-
-#Gather into long data format
 data_long <- gather(data_wide, source, WAR, -c(franchID, yearID)) ##TODO do we need this? -Conor
 
 ```
@@ -327,8 +335,14 @@ data_long <- gather(data_wide, source, WAR, -c(franchID, yearID)) ##TODO do we n
 
 ```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
 
-RMSE(data_wide$Truth, data_wide$FanGraphPred)
-RMSE(data_wide$Truth[data_wide$yearID >= 1949], data_wide$BBproPred[data_wide$yearID >= 1949]) #only have data for these years
+
+MSE(data_wide$Truth, data_wide$FanGraphPred)
+MSE(data_wide$Truth, data_wide$BBproPred)
+MSE(data_wide$Truth, data_wide$BRefPred)
+
+lm(Truth ~ FanGraphPred, data = data_wide)
+lm(Truth ~ BBproPred, data = data_wide)
+lm(Truth ~ BRefPred, data = data_wide)
 
 
 FG_diff = data_wide$FanGraphPred - data_wide$Truth
@@ -336,20 +350,59 @@ mean(FG_diff)
 median(FG_diff)
 sd(FG_diff)
 
-BBP_diff = data_wide$BBproPred[data_wide$yearID >= 1949] - data_wide$Truth[data_wide$yearID >= 1949]
+BBP_diff = data_wide$BBproPred - data_wide$Truth
 mean(BBP_diff)
 median(BBP_diff)
 sd(BBP_diff)
 
-#TODO make these ggplot, keep dim the same across graphs (or do overlapping graphs)
-hist(FG_diff)
-hist(BBP_diff)  
+BRef_diff = data_wide$BRefPred - data_wide$Truth
+mean(BRef_diff)
+median(BRef_diff)
+sd(BRef_diff)
+
+
+diff2 = cbind(FG_diff, BBP_diff, BRef_diff)
+diff2 = as.data.frame(diff2)
+
+diff2 %>% ggplot() + 
+    geom_histogram(aes(x=FG_diff, fill="Fan Graph"), alpha = 0.2, breaks = seq(-20, 20, 0.5)) +
+    geom_histogram(aes(x=BBP_diff, fill="Baseball Prospectus"), alpha = 0.2, breaks = seq(-20, 20, 0.5)) +
+    geom_histogram(aes(x=BRef_diff, fill="Baseball Reference"), alpha = 0.2, breaks = seq(-20, 20, 0.5)) +
+    ggtitle("Difference Between Predicted and True Wins") +
+    xlab("Difference") +
+    ylab("Count") +
+    scale_fill_manual(values = c("Fan Graph" = rgb(1,0,0), "Baseball Prospectus" = rgb(0,1,0), "Baseball Reference"=rgb(0,0,1)))
 
 data_wide %>% ggplot(aes(x = Truth, y = FanGraphPred)) +  
-    geom_point(color="blue", size = 1) +
-    geom_abline(slope = 1, intercept = 0) 
+    geom_point(color="red", size = 1) +
+    geom_abline(slope = 1, intercept = 0) +
+    ggtitle("Fan Graph True v Predicted Wins") +
+    xlab("True Wins") +
+    ylab("Predicted Wins")
 
-lm(Truth ~ FanGraphPred, data = data_wide)
+data_wide %>% ggplot(aes(x = Truth, y = BBproPred)) +  
+    geom_point(color="green", size = 1) +
+    geom_abline(slope = 1, intercept = 0) +
+    ggtitle("Fan Graph True v Predicted Wins") +
+    xlab("True Wins") +
+    ylab("Predicted Wins")
+
+data_wide %>% ggplot(aes(x = Truth, y = BRefPred)) +  
+    geom_point(color="blue", size = 1) +
+    geom_abline(slope = 1, intercept = 0) +
+    ggtitle("Baseball Reference True v Predicted Wins") +
+    xlab("True Wins") +
+    ylab("Predicted Wins")
+
+data_wide %>% ggplot() +
+    geom_point(aes(x = Truth, y = FanGraphPred, color="Fan Graph"), alpha = 0.5) + 
+    geom_point(aes(x = Truth, y = BBproPred, color="Baseball Prospectus"), alpha = 0.5) + 
+    geom_point(aes(x = Truth, y = BRefPred, color="Baseball Reference"), alpha = 0.5) +
+    scale_fill_manual(values = c("Fan Graph" = rgb(1,0,0), "Baseball Prospectus" = rgb(0,1,0), "Baseball Reference"=rgb(0,0,1))) +
+    geom_abline(slope = 1, intercept = 0) +
+    ggtitle("True v Predicted Wins") +
+    xlab("True Wins") +
+    ylab("Predicted Wins")
 
 data_sum <- data_long %>%
   group_by(yearID, source) %>%
@@ -401,8 +454,8 @@ a <- data_wide %>%
   group_by(yearID) %>%
   summarize(sumW = sum(Truth))
 
-RMSE(a$sumW, a2$sum.rWARpred)
-RMSE(a$sumW, a3$sum.WARPpred)
+MSE(a$sumW, a2$sum.rWARpred)
+MSE(a$sumW, a3$sum.WARPpred)
 ```
 
 According to RMSE, `rWAR` is a better predictor than `WARP`. However, we can definitely improve upon the naive model by accounting for the substructure within our data, e.g. team effect, team x year interaction effect, etc. 
