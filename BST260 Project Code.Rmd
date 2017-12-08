@@ -341,10 +341,6 @@ MSE(data_wide$Truth, data_wide$FanGraphPred)
 MSE(data_wide$Truth, data_wide$BBproPred)
 MSE(data_wide$Truth, data_wide$BRefPred)
 
-lm(Truth ~ FanGraphPred, data = data_wide)
-lm(Truth ~ BBproPred, data = data_wide)
-lm(Truth ~ BRefPred, data = data_wide)
-
 statistics_matrix = matrix(nrow = 3, ncol = 3)
 rownames(statistics_matrix) = c("Fan Graph", "Baseball Prospectus", "Baseball Reference")
 colnames(statistics_matrix) = c("Mean Difference", "Standard Deviation", "Slope")
