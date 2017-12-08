@@ -412,17 +412,6 @@ data_wide %>% ggplot() +
     ylab("Predicted Wins") +
     xlim(40, 125) +
     ylim(40, 125)
-
-data_sum <- data_long %>%
-  group_by(yearID, source) %>%
-  summarize(sumWAR = sum(WAR))
-
-data_sum %>%
-  ggplot(aes(x = yearID, y = sumWAR, group = source)) + 
-  geom_line(aes(color = source)) +
-  ggtitle("Number of Wins vs. Wins by Replacement (WAR) by Year") +
-  xlab("Year") +
-  ylab("Number of Wins")
 ```
 
 From this plot, it appears that both `rWAR` and `WARP` capture the trend of true wins over time. However, there is a substantial bias because both WAR statistics are hugely underestimating the truth. 
@@ -492,4 +481,27 @@ From these residual boxplots, we can see that Baseball Prospectus has the larges
 What did you learn about the data? How did you answer the questions? How can you justify your answers?
 
 ```{r}
+set.seed(123)
+test_ind <- sample(1:nrow(data_wide), round(nrow(data_wide)*0.2), replace = FALSE)
+train_ind <- -test_ind
+train_df <- data_wide[train_ind, ]
+test_df <- data_wide[test_ind, ]
+
+m1 <- lm(Truth ~ BRefPred, data = train_df)
+m2 <- lm(Truth ~ BBproPred, data = train_df)
+m3 <- lm(Truth ~ FanGraphPred, data = train_df)
+
+## test prediction on test dataset
+pred1 <- predict(m1, newdata = test_df)
+pred2 <- predict(m2, newdata = test_df)
+pred3 <- predict(m3, newdata = test_df)
+
+test_df_lm <- cbind(test_df,
+                      BRef_lmpred = pred1,
+                      BBpro_lmpred = pred2, 
+                      FanGraph_lmpred = pred3)
+
+MSE(test_df_lm$Truth, test_df_lm$BRef_lmpred)
+MSE(test_df_lm$Truth, test_df_lm$BBpro_lmpred)
+MSE(test_df_lm$Truth, test_df_lm$FanGraph_lmpred)
 ```
