@@ -367,7 +367,7 @@ From this plot, it appears that both `rWAR` and `WARP` capture the trend of true
 
 Next, let's build a naive model to capture the effect of WAR on predicting the truth for each of the 3 WAR statistics. 
 
-```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
+```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center', eval = FALSE}
 #Linear regression for rWAR and WARP, respectively
 m1 <- lm(Truth ~ rWAR, data = data_wide)
 m2 <- lm(Truth ~ WARP, data = data_wide)
@@ -407,6 +407,27 @@ RMSE(a$sumW, a3$sum.WARPpred)
 
 According to RMSE, `rWAR` is a better predictor than `WARP`. However, we can definitely improve upon the naive model by accounting for the substructure within our data, e.g. team effect, team x year interaction effect, etc. 
 
+```{r Exploratory Boxplots}
+data_long <- gather(data_wide, Pred, Val, -c(franchID, yearID, Truth, Games))
+data_long2 <- data_long %>%
+  mutate(Residuals = (Val - Truth))
+
+gg2 <- data_long2 %>%
+  ggplot(aes(x = franchID, y = Residuals)) +
+  geom_boxplot(fill = "lightblue") +
+  facet_wrap(~ Pred, ncol = 1) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Team Name") +
+  ggtitle("")
+gg2
+```
+
+Here, we plot the residuals (WAR preditions - true number of wins) across different teams for the 3 WAR statistics `WARP` (top), `rWAR` (middle), and `fWAR` (bottom). To assess degree of fit, we visually examine these boxplots, with boxplots centered around 0 suggesting good fit. 
+
+From these residual boxplots, we can see that Baseball Prospectus has the largest residuals (longest boxes) across the different teams. Moreover, it also has many outliers, which may dilute signal. On the other hand, Baseball Reference and Fangraph's WAR statistics perform relatively well, with the boxplots centered around 0. 
+
 ### Final Analysis
 What did you learn about the data? How did you answer the questions? How can you justify your answers?
 
+```{r}
+```
