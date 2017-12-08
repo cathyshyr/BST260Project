@@ -23,19 +23,30 @@ RMSE <- function(Truth_ratings, predicted_ratings){
 ```
 
 ### Overview and Motivation
-Sabermetrics has become quite popular, especially in more recent years. Researchers have developed metrics that are widely used to gauge and predict player performance. The search for more reliable and accurate measures is still ongoing. We will begin our search by analyzing and comparing an increasingly popular but not officially recognized metric: *wins above replacement* (WAR). There is no universal way of calculating WAR, so we assess its accuracy across three different sources. In doing so, we also aim to derive a more "comprehensive" metric, perhaps one that is a combination of the three to improve results.
+Sabermetrics has become quite popular, especially in more recent years. Researchers have developed metrics that are widely used to gauge player performance. The search for more reliable and accurate measures is still ongoing. We will begin our search by analyzing and comparing an increasingly popular but not officially recognized metric: *wins above replacement* (WAR). There is no universal way of calculating WAR, so we assess its accuracy across three different sources. In doing so, we also aim to derive a more "comprehensive" metric, perhaps one that is a combination of the three to improve results.
 
 ### Related Work
 
-Anything that inspired you, such as a paper, a web site, or something we discussed in class.
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/moneyball07.jpg)
 
+Sabermetrics has a polarizing reputation in the outside world. It is not often regarded as "serious" in academia, and until more recent years, its value was understated and overlooked by individuals of the baseball world. However, the tides began to turn when Michael Lewis punished "Moneyball" in 2003, which focuses on the analytical and sabermetric approach to assembling a competitive baseball team.
 
+In the critically acclaimed movie of the same name, Peter, portrayed by Jonah Hill, criticizes the traditional view of baseball:
+
+> There is an epidemic failure within the game to understand what's really happening. And it leads people who run major league teams to misjudge their players and mismanage their teams. They're still asking the wrong questions. People who run baseball teams still think in terms of buying players. Sorry to say that. The goal shouldn't be to buy players, what you want to buy is wins. To buy wins, you buy runs.
+
+Our goal is to assess the accuracy of WAR, a non-standardized statistic, and provide some insight on its potential value in sabermetrics. 
 
 ### Initial Questions
-What questions are you trying to answer? How did these questions evolve over the course of the project? What new questions did you consider in the course of your analysis?
+
+Some initial questions we wish to answer include:
+- What is the relationship between WAR and the number of wins a team sees?
+- How accurately does WAR predict the number of wins a team observes in a given year?
+- How can the three different ways to calculate WAR be combined to produce a more reliable statistic?
+- What are some efficient techniques that one could use to scrape data from Fangraphs, Baseball Prospectus, and Baseball Reference, all of which are commonly visited websites in the baseball world?
 
 ### Data
-Source, scraping method, cleanup, etc.
+Data are obtained from the `Teams` dataset in the `Lahman` package and from three external sources: [Baseball Prospectus](http://legacy.baseballprospectus.com/sortable/), [Baseball Reference](https://www.baseball-reference.com/), and [Fangraphs](https://www.baseball-reference.com/). We scraped data from the three sources using various techniques that are described below. Extensive cleaning had to be done to arrive at a complete and usable dataset.
 
 **Baseball Prospectus**
 
