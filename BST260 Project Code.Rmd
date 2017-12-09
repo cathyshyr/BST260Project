@@ -359,7 +359,7 @@ FanGraphWar = matrix(nrow=30, ncol= 115)
 
 
 start.time <- Sys.time()
-for (team in 30:30)
+for (team in 1:30)
 {
     for(year in 1:115)
     {
