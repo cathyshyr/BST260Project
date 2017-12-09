@@ -520,6 +520,8 @@ What visualizations did you use to look at your data in different ways? What are
 
 ####How well does WAR compare to the true number of wins?
 
+First, we wanted to assess at the most basic level which predictor performed the best. We defined our assessment in terms of the mean square error (MSE) between the true wins a team had during a season and the predcited wins by each of the three algorithms. In terms of MSE, we found that the Baseball Reference performed the best (MSE = 5.13), then Fan Graph (MSE = 6.23), and last was Baseball Prospectus (MSE = 9.25). Additionally, we also wanted to assess how well the different WAR statistics correlated with true wins. Ideally, we would expect slopes of 1 (i.e. each 1 additional WAR corresponds to 1 additional team win). In terms of this, Fan Graph had the best model, with a slope of 1.002, followed closely by Baseball Reference 0.986, and lastly -far behind the other two- was Baseball Prospectus at 0.692. 
+
 ```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
 
 
