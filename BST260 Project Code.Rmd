@@ -386,7 +386,7 @@ data_wide %>% ggplot(aes(x = Truth, y = FanGraphPred)) +
 data_wide %>% ggplot(aes(x = Truth, y = BBproPred)) +  
     geom_point(color="green", size = 1) +
     geom_abline(slope = 1, intercept = 0) +
-    ggtitle("Fan Graph True v Predicted Wins") +
+    ggtitle("Baseball Prospectus True v Predicted Wins") +
     xlab("True Wins") +
     ylab("Predicted Wins") +
     xlim(40, 125) +
