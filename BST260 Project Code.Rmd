@@ -110,7 +110,7 @@ $$
 
 `rWAR` is based on six different components: (1) batting runs, (2) baserunning runs, (3) runs added or lost due to grounding into double plays in double play situations, (4) fielding runs,  (5) positional adjustment runs, and (6) replacement level runs. The first five components are compared against the league average, meaning an "average" league player is assigned a value of zero. It follows that negative numbers correspond to worse than average and positive numbers better than average. These five components make up the first half of the equation. The last component, replacement level runs, makes up the second part of the equation.
 
-Data are provided for each team in different years. Separate tables are displayed for batters and pitchers. The screenshot above provides an example of one of the tables shown for the New York Yankees in 2017. 
+Data are provided for each team in different years. Separate tables are displayed for batters and pitchers. The screenshot below provides an example of one of the tables shown for the New York Yankees in 2017. 
 
 ![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/baseballref_screencap.png)
 
@@ -255,6 +255,197 @@ prospectus_merge <- left_join(prospectus_team, team_sub, by = c("franchID", "yea
 
 #Save dataset 
 write.csv(prospectus_merge, file = "prospectus.csv")
+```
+
+
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/FanGraphPic.png)
+
+
+For its WAR statistic, [Fan Graph](https://www.fangraphs.com/library/misc/war/) contains pitching, hitting, and fielidng components, and is also context league, and stadium neutral. Data is available for each player for each of the current 30 MLB teams as far back as their respective foundings. The URLs for these pages were in a standard format though, there iss a different page for each team for offensive players (i.e. hitters) and pitchers. A challenge presented was that the pages were generated via javascript, so simply connecting to the page with R to get the HTML for the page would not actually include the required data. To remedy this, a short PhantomJS script was written to initiate the javascript on the Fan Graph site.
+
+```{js}
+var url ='https://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=8&season=2017&month=0&season1=2017&ind=0&team=30&rost=0&age=0';
+var page = new WebPage()
+var fs = require('fs');
+
+
+page.open(url, function (status) {
+        just_wait();
+});
+
+function just_wait() {
+    setTimeout(function() {
+               fs.write('1.html', page.content, 'w');
+            phantom.exit();
+    }, 2500);
+}
+```
+
+From within R, we can edit this script (specifically the var url) to get all teams (both pitchers and hitters) and all teams. Then, we simply parse the HTML code, get the WAR values for each player,  then sum them together for each team for each year, reformat the data, and finally save it (team, year, total WAR) to a csv file which we can load for our analysis.
+
+```{r, eval = FALSE}
+
+get_WAR_from_team_year=function(team, year)
+{   
+    
+    #Batters first
+    prep_jc_url(team, year, 1)
+    system("phantomjs scrap_final.js")
+    myHtml <- readLines("1.html")
+    myHtml_sub = myHtml[ grep('LeaderBoard1_dg1_ctl00', myHtml)[1]: grep('LeaderBoard1_dg1_SharedCalendarContainer', myHtml)]
+    myHtml_sub = myHtml_sub [ grep('playerid=', myHtml_sub) ]
+    tmp_o=lapply(myHtml_sub, get_WAR_from_PIDrow, batting=1)
+    
+    #then pitchers
+    prep_jc_url(team, year, 0)
+    system("phantomjs scrap_final.js")
+    myHtml <- readLines("1.html")
+    myHtml_sub = myHtml[ grep('LeaderBoard1_dg1_ctl00', myHtml)[1]: grep('LeaderBoard1_dg1_SharedCalendarContainer', myHtml)]
+    myHtml_sub = myHtml_sub [ grep('playerid=', myHtml_sub) ]
+    tmp_p=lapply(myHtml_sub, get_WAR_from_PIDrow, batting=0)
+    
+    if(length(tmp_p) > 0)
+    {
+    
+        tmp_o_mat = t(matrix(unlist(tmp_o), nrow  =2))
+        tmp_p_mat = t(matrix(unlist(tmp_p), nrow  =2))
+        
+        
+        #could return list, but why not just sum now and return sum? 
+        df_war = data.frame(rbind(tmp_o_mat, tmp_p_mat))
+        #return(df_war)
+        ret = sum(as.numeric(as.character(df_war[,1])))
+        return(ret)
+    }
+    else{return(0)}
+}
+
+
+prep_jc_url=function (team, year, batting)
+{
+     url = paste0('https://www.fangraphs.com/leaders.aspx?pos=all&stats=', ifelse(batting==1, "bat", "pit"),'&lg=all&qual=0&type=8&season=', year, '&month=0&season1=', year, '&ind=0&team=', team, '&rost=0&age=0')
+     lines <- readLines("scrap_final.js")
+     lines[1] <- paste0("var url ='", url ,"';")
+     writeLines(lines, "scrap_final.js")
+}
+
+
+
+get_WAR_from_PIDrow = function(string, batting)
+{
+    #WAR
+    tmp = gregexpr('<td class="grid_line_regular" align="right">', string)
+    start = tmp[[1]][(length(tmp[[1]]))]
+    tmp_string = substr(string, start=start, stop = start+100)
+    WAR = as.numeric(split_string_on_gele(tmp_string)[ifelse(batting==1, 3, 7)])
+    
+    #Name
+    tmp = gregexpr('playerid', string)
+    start = tmp[[1]][(length(tmp[[1]]))]
+    tmp_string = substr(string, start=start, stop = start+100)
+    name = split_string_on_gele(tmp_string)[2]
+    
+    return(c(WAR, name))
+}
+
+split_string_on_gele = function(string)
+{
+    matrix(strsplit(string, "[><]"))[[1]]
+}
+
+
+
+FanGraphWar = matrix(nrow=30, ncol= 115)
+
+
+start.time <- Sys.time()
+for (team in 30:30)
+{
+    for(year in 1:115)
+    {
+        reportedTeamWAR = get_WAR_from_team_year(team, year+1902)
+        FanGraphWar[team, year] = reportedTeamWAR
+        print(paste(reportedTeamWAR, team, year))
+    }
+    
+}
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken
+
+FGW = as.data.frame(t(FanGraphWar))
+
+#label with franchID's 
+FGW$ANA = FGW$V1 
+FGW$BAL = FGW$V2 
+FGW$BOS = FGW$V3 
+FGW$CHW = FGW$V4 
+FGW$CLE = FGW$V5 
+FGW$DET = FGW$V6
+FGW$KCR = FGW$V7 
+FGW$MIN = FGW$V8 
+FGW$NYY = FGW$V9 
+FGW$OAK = FGW$V10 
+FGW$SEA = FGW$V11 
+FGW$TBD = FGW$V12 
+FGW$TEX = FGW$V13 
+FGW$TOR = FGW$V14 
+FGW$ARI = FGW$V15 
+FGW$ATL = FGW$V16 
+FGW$CHC = FGW$V17 
+FGW$CIN = FGW$V18 
+FGW$COL = FGW$V19 
+FGW$FLA = FGW$V20 
+FGW$HOU = FGW$V21 
+FGW$LAD = FGW$V22 
+FGW$MIL = FGW$V23
+FGW$WSN = FGW$V24 
+FGW$NYM = FGW$V25 
+FGW$PHI = FGW$V26
+FGW$PIT = FGW$V27 
+FGW$STL = FGW$V28 
+FGW$SDP = FGW$V29 
+FGW$SFG = FGW$V30
+
+#make sure we only have the 30 current teams
+library(Lahman)
+keeps = tail(Teams$franchID, n = 30)
+FGW = FGW[, (names(FGW) %in% keeps)]
+
+#transform it to a better format
+
+FanGraphWARs = df <- data.frame(franchID=character(), year=integer(), WAR=double(), stringsAsFactors=FALSE) 
+
+
+for (team in colnames(FGW))
+{
+    zero_marker = 1
+    for(year_idx in 1:115)
+    {
+        tmp = as.data.frame(x=list(franchID = team, year = year_idx + 1902, WAR = FGW[year_idx, team]))
+        
+        if (zero_marker == 1)
+        {
+            if (tmp$WAR == 0.0)
+            {
+                #do nothing, before team was created 
+            }
+            else
+            {
+                zero_marker = 0 #we know the franchise has been created now
+                FanGraphWARs = rbind(FanGraphWARs , tmp)
+            }
+        }
+        else
+        {
+            FanGraphWARs = rbind(FanGraphWARs , tmp)
+        }
+    }
+}
+
+write.csv(FanGraphWARs, "FanGraphWARs_better_format.csv")
+
+
 ```
 
 
