@@ -458,7 +458,7 @@ MSE(a$sumW, a3$sum.WARPpred)
 
 According to RMSE, `rWAR` is a better predictor than `WARP`. However, we can definitely improve upon the naive model by accounting for the substructure within our data, e.g. team effect, team x year interaction effect, etc. 
 
-```{r Exploratory Boxplots}
+```{r Exploratory Boxplots, fig.width=10, fig.align='center'}
 data_long <- gather(data_wide, Pred, Val, -c(franchID, yearID, Truth, Games))
 data_long2 <- data_long %>%
   mutate(Residuals = (Val - Truth))
@@ -482,26 +482,50 @@ What did you learn about the data? How did you answer the questions? How can you
 
 ```{r}
 set.seed(123)
-test_ind <- sample(1:nrow(data_wide), round(nrow(data_wide)*0.2), replace = FALSE)
-train_ind <- -test_ind
-train_df <- data_wide[train_ind, ]
-test_df <- data_wide[test_ind, ]
+k <- 10
+#Perform k-fold cross validation
+folds <- createFolds(1:nrow(data_wide), k)
 
-m1 <- lm(Truth ~ BRefPred, data = train_df)
-m2 <- lm(Truth ~ BBproPred, data = train_df)
-m3 <- lm(Truth ~ FanGraphPred, data = train_df)
+#Define function for performing gradient-free optimization
+fn <- function(x){
+  ref <- x[1]
+  pros <- x[2]
+  fan <- x[3]
+  pred <- ref*data_wide$BRefPred + pros*data_wide$BBproPred + fan*data_wide$FanGraphPred 
+  MSE(pred, data_wide$Truth)
+}
 
-## test prediction on test dataset
-pred1 <- predict(m1, newdata = test_df)
-pred2 <- predict(m2, newdata = test_df)
-pred3 <- predict(m3, newdata = test_df)
+#Initialize output matrix
+MSE_val <- matrix(NA, 4, k)
 
-test_df_lm <- cbind(test_df,
+for(i in 1:k){
+  test_df <- data_wide[folds[[i]],]
+  train_df <- data_wide[-folds[[i]],]
+  
+  m1 <- lm(Truth ~ BRefPred, data = train_df)
+  m2 <- lm(Truth ~ BBproPred, data = train_df)
+  m3 <- lm(Truth ~ FanGraphPred, data = train_df)
+  m4 <- optim(c(1, 1, 1), fn, method = c("Nelder-Mead"))
+  
+  ## test prediction on test dataset
+  pred1 <- predict(m1, newdata = test_df)
+  pred2 <- predict(m2, newdata = test_df)
+  pred3 <- predict(m3, newdata = test_df)
+  
+  test_df_lm <- cbind(test_df,
                       BRef_lmpred = pred1,
                       BBpro_lmpred = pred2, 
                       FanGraph_lmpred = pred3)
-
-MSE(test_df_lm$Truth, test_df_lm$BRef_lmpred)
-MSE(test_df_lm$Truth, test_df_lm$BBpro_lmpred)
-MSE(test_df_lm$Truth, test_df_lm$FanGraph_lmpred)
+  
+  
+  MSE_val[1, i] <- MSE(test_df_lm$Truth, test_df_lm$BRef_lmpred)
+  MSE_val[2, i] <- MSE(test_df_lm$Truth, test_df_lm$BBpro_lmpred)
+  MSE_val[3, i] <- MSE(test_df_lm$Truth, test_df_lm$FanGraph_lmpred)
+  MSE_val[4, i] <- m4$value
+}
+rownames(MSE_val) <- c("Baseball Reference", "Baseball Prospectus", "Fangraph", "Combined Model")
+apply(MSE_val, 1, mean)
 ```
+
+
+
