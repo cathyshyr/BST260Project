@@ -318,7 +318,7 @@ data = inner_join(data, FanGraphs, by =c("franchID", "yearID"))
 
 #Join combined data with true number of wins in Lahman's dataset to create wide data set 
 team_sub <- Teams %>%
-    select(yearID, franchID, W, G)  %>%
+    select(yearID, franchID, W, G, lgID)  %>%
     rename(Truth = W, Games = G)
 data_wide <- left_join(data, team_sub, by = c("franchID", "yearID"))
 
@@ -413,6 +413,61 @@ data_wide %>% ggplot() +
     ylab("Predicted Wins") +
     xlim(40, 125) +
     ylim(40, 125)
+
+
+
+
+
+league_splits = data_wide %>%
+    group_by(lgID) %>%
+    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
+              MSE(Truth, BRefPred) )
+
+##Is there a difference by Era? 
+
+#A few Eras to consider: Deadball 2: 1960-1969
+#                       DH 1973 - Present
+#                       Free Agency 1975-Present
+#                       Steroid Ero 1985-2005
+#                       Wild Card: 1994 - Present
+
+deadball2 = data_wide %>%
+    filter(yearID %in% 1960:1969) %>%
+    group_by(lgID) %>%
+    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
+              MSE(Truth, BRefPred) )
+deadball2 = cbind(deadball2, Era="Deadball")
+
+dh = data_wide %>%
+    filter(yearID %in% 1973:2016) %>%
+    group_by(lgID) %>%
+    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
+              MSE(Truth, BRefPred) )
+dh = cbind(dh, Era="DH")
+
+free_agency = data_wide %>%
+    filter(yearID %in% 1975:2016) %>%
+    group_by(lgID) %>%
+    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
+              MSE(Truth, BRefPred) )
+free_agency = cbind(free_agency, Era = "Free Agency")
+
+steroid = data_wide %>%
+    filter(yearID %in% 1985:2005) %>%
+    group_by(lgID) %>%
+    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
+              MSE(Truth, BRefPred) )
+steroid = cbind(steroid, Era="Steroid")
+
+wildcard = data_wide %>%
+    filter(yearID %in% 1994:2016) %>%
+    group_by(lgID) %>%
+    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
+              MSE(Truth, BRefPred) )
+wildcard = cbind(wildcard, Era="Wildcard")
+
+era_analysis = rbind(deadball2, dh, free_agency, steroid, wildcard)
+
 ```
 
 From this plot, it appears that both `rWAR` and `WARP` capture the trend of true wins over time. However, there is a substantial bias because both WAR statistics are hugely underestimating the truth. 
@@ -460,9 +515,9 @@ MSE(a$sumW, a3$sum.WARPpred)
 According to RMSE, `rWAR` is a better predictor than `WARP`. However, we can definitely improve upon the naive model by accounting for the substructure within our data, e.g. team effect, team x year interaction effect, etc. 
 
 ```{r Exploratory Boxplots, fig.width=10, fig.height=10, fig.align='center'}
-data_long <- gather(data_wide, Pred, Val, -c(franchID, yearID, Truth, Games))
+data_long <- gather(data_wide, Pred, Val, -c(franchID, yearID, Truth, Games, lgID))
 data_long2 <- data_long %>%
-  mutate(Residuals = (Val - Truth))
+  mutate(Residuals = (as.numeric(as.character(Val)) - as.numeric(as.character(Truth))))
 
 gg2 <- data_long2 %>%
   ggplot(aes(x = franchID, y = Residuals)) +
