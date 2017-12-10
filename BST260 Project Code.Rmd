@@ -1,5 +1,5 @@
 ---
-title: "BST260 Final Project"
+title: "The WAR of Moneyball: Wins Above Replacement as a Predictor of Wins"
 author: "Conor Foley, Benjamin Hong, Cathy Wang"
 date: "12/4/2017"
 output: html_document
@@ -16,6 +16,7 @@ library(broom)
 library(Lahman)
 library(caret)
 library(knitr)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.width = 10)
 
 
 MSE <- function(Truth_ratings, predicted_ratings){
@@ -25,11 +26,11 @@ MSE <- function(Truth_ratings, predicted_ratings){
 ```
 
 ### Overview and Motivation
-Sabermetrics has become quite popular, especially in more recent years. Researchers have developed metrics that are widely used to gauge player performance. The search for more reliable and accurate measures is still ongoing. Specifically, teams are interested in buying wins. We will begin our search by analyzing an increasingly popular but not officially recognized metric: *wins above replacement* (WAR), which attempts to be a single metric which directly quantifies how many wins a player is worth to a team. However, as a statistic not officially recognized by Major League Baseball, there is no universal way of calculating WAR, with the three most popular versions coming from Baseball Reference, Baseball Prospectus, and Fan Grpah. But how well do these three versions compare in predicting true wins for a team from team total WAR? We address this question, and provde some further analysis. In doing so, we also aim to derive a more "comprehensive" metric, one that is a combination of the three to improve results.
+Sabermetrics has become quite popular, especially in more recent years. Researchers have developed metrics that are widely used to gauge player performance. The search for more reliable and accurate measures is still ongoing. Specifically, teams are interested in buying wins. We will begin our search by analyzing an increasingly popular but not officially recognized metric: *wins above replacement* (WAR), which attempts to be a single metric which directly quantifies how many wins a player is worth to a team. However, as a statistic not officially recognized by Major League Baseball, there is no universal way of calculating WAR, with the three most popular versions coming from Baseball Reference, Baseball Prospectus, and Fan Graph But how well do these three versions compare in predicting true wins for a team from team total WAR? We address this question, and provde some further analysis. In doing so, we also aim to derive a more "comprehensive" metric, one that is a combination of the three to improve results.
 
 ### Related Work
 
-![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/moneyball07.jpg)
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/Pictures/moneyball07.jpg)
 
 Sabermetrics has a polarizing reputation in the outside world. It is not often regarded as "serious" in academia, and until more recent years, its value was understated and overlooked by individuals of the baseball world. However, the tides began to turn when Michael Lewis published "Moneyball" in 2003, which focuses on the analytical and sabermetric approach to assembling a competitive baseball team.
 
@@ -58,7 +59,7 @@ Our data was obtained from the `Teams` dataset in the `Lahman` package (there is
 
 Baseball Prospectus was the least challenging of the three for data wrangling. All players for each season were displayed on a single page with their respective team and BWARP (Baseball Prospectus's version of WAR) annually for each year from 1871 to 2017 as can be seen in the image below. To scrape year-specific data, we vectorized over the range of years and used the function `set_values` and `submit_form` to automate the selection process and extracted the table of interest by identifying the corresponding `html_node`. The code has been provided below (though we recommend caution in running any of our data wrangling code blocks as they can take on the order of hours to run; we wrote all of our wrangled data to csv files for much faster data access in the later analyses).
 
-![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/scrape_prospectus.png)
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/Pictures/scrape_prospectus.png)
 
 
 ```{r Baseball Prospectus, eval = FALSE}
@@ -89,8 +90,8 @@ prospectus_batting <- do.call(rbind, lapply(1871:2017, prospectus, url = url_bat
 prospectus_pitching <- do.call(rbind, lapply(1871:2017, prospectus, url = url_pitching))
 
 #Reformat data 
-prospectus_pitching <- read.csv("prospectus_pitching_full.csv")
-prospectus_batting <- read.csv("prospectus_batting_full.csv")
+prospectus_pitching <- read.csv("Datasets/prospectus_pitching_full.csv")
+prospectus_batting <- read.csv("Datasets/prospectus_batting_full.csv")
 
 prospectus_pitching_small <- prospectus_pitching[, c("NAME", "TEAM", "YEAR", "PWARP")]
 names(prospectus_pitching_small) <- c("Name", "Team", "Year", "WARP")
@@ -102,7 +103,7 @@ names(prospectus_batting_small) <- c("Name", "Team", "Year", "WARP")
 
 The data on Baseball Reference are grouped by team and years. Separate tables are displayed for batters and pitchers. The screenshot below provides an example of one of the tables shown for the New York Yankees in 2017. 
 
-![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/baseballref_screencap.png)
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/Pictures/baseballref_screencap.png)
 
 Links to these tables follow a general pattern, so a vector of all the possible links was created. We then looped through all of these links to grab the tables from each page. Final touches were made to get the datasets into the right format (agin, the computation time on the was very large).
 
@@ -250,9 +251,9 @@ write.csv(prospectus_merge, file = "prospectus.csv")
 **Fan Graphs**
 
 
-On Fan Graph, data is available for each player for each of the current 30 MLB teams as far back as their respective foundings. The URLs for these pages were in a standard format though, like Baseball Prospectus, there is a different page for each team for offensive players (i.e. hitters) and pitchers. A challenge unique to the Fan Graph data scraping was that the pages were generated via javascript, so simply connecting to the site with R to get the HTML for the pages would not actually include the required data, rather just the format of the page. To remedy this, a short PhantomJS script was written to initiate the javascript on the Fan Graph site. From within R, we can edit this script (specifically the var url) to get all players (both pitchers and hitters) and all teams. Then, we simply parse the HTML code, get the WAR values for each player, sum them together for each team for each year, reformat the data, and finally save it (team, year, total WAR) to a csv file which we can load for our analysis.
+On Fan Graph, data is available for each player for each of the current 30 MLB teams as far back as their respective foundings. The URLs for these pages were in a standard format though, like Baseball Prospectus, there is a different page for each team for offensive players (i.e. hitters) and pitchers. A challenge unique to the Fan Graph data scraping was that the pages were generated via JavaScript, so simply connecting to the site with R to get the HTML for the pages would not actually include the required data, rather just the format of the page. To remedy this, a short PhantomJS script was written to initiate the JavaScript on the Fan Graph site. From within R, we can edit this script (specifically the var URL) to get all players (both pitchers and hitters) and all teams. Then, we simply parse the HTML code, get the WAR values for each player, sum them together for each team for each year, reformat the data, and finally save it (team, year, total WAR) to a csv file which we can load for our analysis.
 
-![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/FanGraphPic.png)
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/Pictures/FanGraphPic.png)
 
 
 
@@ -443,11 +444,11 @@ write.csv(FanGraphWARs, "FanGraphWARs_better_format.csv")
 
 ####Combine data sets
 
-After getting our three datasets into csv format, the next step was to combine them into on usable data frame for our analysis. Notably, Baseball Prospectus's data only went as far back as 1949, so we opted to only include data from 1949 from all three sources in our analyses. An additional point of note for those unfamiliar with the WAR statistic, the statistic takes into account how many wins a team of replacement players would get over the course of a season (and a player's WAR is meant to be a prediction of how many additional wins a player provides in place of this replacement player). In other words, our calculated team total WARs are not in fact the predicted number of wins, but the predicted number of wins over a replacement team. For Baseball Reference and Fan Graph, a team of replacement players is expected to win 0.294 of its games, while Baseball Prospectus sets this line at 0.320. To get predicted wins, we mutliply the number of games a team played in a season (acquired from Lahman) by these replacement win percentages, then added the team total WAR. 
+After getting our three datasets into csv format, the next step was to combine them into on usable data frame for our analysis. Notably, Baseball Prospectus's data only went as far back as 1949, so we opted to only include data from 1949 from all three sources in our analyses. An additional point of note for those unfamiliar with the WAR statistic, the statistic takes into account how many wins a team of replacement players would get over the course of a season (and a player's WAR is meant to be a prediction of how many additional wins a player provides in place of this replacement player). In other words, our calculated team total WARs are not in fact the predicted number of wins, but the predicted number of wins over a replacement team. For Baseball Reference and Fan Graph, a team of replacement players is expected to win 0.294 of its games, while Baseball Prospectus sets this line at 0.320. To get predicted wins, we multiply the number of games a team played in a season (acquired from Lahman) by these replacement win percentages, then added the team total WAR. 
 
 ```{r, warning = FALSE, message = FALSE}
 #Read in BBProspectus data and remove extraneous columns
-BBProspectus <- read.csv("prospectus.csv")
+BBProspectus <- read.csv("Datasets/prospectus.csv")
 BBProspectus <- BBProspectus %>%
     rename(BBproWAR = WARP, teamID = franchID) %>%
     select(c(-X, -W))
@@ -470,7 +471,7 @@ BBProspectus = BBProspectus %>%
     select(c(-teamID))
 
 #Read in BBProspectus data and remove extraneous columns
-BBReference <- read.csv("BBReference.csv")
+BBReference <- read.csv("Datasets/BBReference.csv")
 BBReference <- BBReference %>%
     filter(yearID >= 1949) %>%
     rename(BRefWAR = WAR) %>%
@@ -489,7 +490,7 @@ for (i in 1:length(BBReference[, 1]))
     }
 }
 
-FanGraphs <- read.csv("Conor/FanGraphWARs_better_format.csv")
+FanGraphs <- read.csv("Datasets/FanGraphWARs_better_format.csv")
 FanGraphs <- FanGraphs %>%
     rename(FanGraphWAR = WAR, yearID=year) %>%
     select(c(-X))
@@ -521,9 +522,9 @@ What visualizations did you use to look at your data in different ways? What are
 
 ####How well does WAR compare to the true number of wins?
 
-Before doing any statistical analysis, as a sanity check and easy visualization of the data we created box plots of the redisudals (predicted - true wins) for each team and each WAR statistic. Ideally, we would hope for these residuals to be centered at 0, with little variance (i.e. short boxes) and little to no outliers. As can be seen in the plot below, our results for Fan Graph and Baseball Reference both fit tese criteria. However, Baseball Prospectus had much more variability in its residuals, having larger residuals (i.e. longer boxes), more outliers, and was less centered around 0. Additionally, for Fan Graph and Baseball Reference there are no obvious team effects. 
+Before doing any statistical analysis, as a sanity check and easy visualization of the data we created box plots of the residuals (predicted - true wins) for each team and each WAR statistic. Ideally, we would hope for these residuals to be centered at 0, with little variance (i.e. short boxes) and little to no outliers. As can be seen in the plot below, our results for Fan Graph and Baseball Reference both fit these criteria. However, Baseball Prospectus had much more variability in its residuals, having larger residuals (i.e. longer boxes), more outliers, and was less centered around 0. Additionally, for Fan Graph and Baseball Reference there are no obvious team effects. 
 
-```{r}
+```{r, fig.width = 10}
 data_long <- gather(data_wide, Pred, Val, -c(franchID, yearID, Truth, Games, lgID))
 data_long2 <- data_long %>%
   mutate(Residuals = (as.numeric(as.character(Val)) - as.numeric(as.character(Truth))))
@@ -539,11 +540,11 @@ gg2
 ```
 
 
-First, in our more formal analysis, we wanted to assess at the most basic level which predictor performed the best. We defined our assessment in terms of the mean square error (MSE) between the true wins a team had during a season and the wins predicted by each of the three algorithms. In terms of MSE, we found that the Baseball Reference performed the best (MSE = 5.13), then Fan Graph (MSE = 6.23), and last was Baseball Prospectus (MSE = 9.25), whcih matched our initial assessment from our box plot. Additionally, we also wanted to assess how well the different WAR statistics correlated with true wins. Ideally, we would expect slopes of 1 (i.e. each 1 additional WAR corresponds to 1 additional team win). In terms of this, Fan Graph had the best model, with a slope of 1.002, followed closely by Baseball Reference 0.986, and lastly ---far behind the other two--- was Baseball Prospectus at 0.692. 
+First, in our more formal analysis, we wanted to assess at the most basic level which predictor performed the best. We defined our assessment in terms of the mean square error (MSE) between the true wins a team had during a season and the wins predicted by each of the three algorithms. In terms of MSE, we found that the Baseball Reference performed the best (MSE = 5.13), then Fan Graph (MSE = 6.23), and last was Baseball Prospectus (MSE = 9.25), which matched our initial assessment from our box plot. Additionally, we also wanted to assess how well the different WAR statistics correlated with true wins. Ideally, we would expect slopes of 1 (i.e. each 1 additional WAR corresponds to 1 additional team win). In terms of this, Fan Graph had the best model, with a slope of 1.002, followed closely by Baseball Reference 0.986, and lastly ---far behind the other two--- was Baseball Prospectus at 0.692. 
 
 In visualizing the differences between our predictors and the true wins, we produced the below plot, histograms of the differences between prediction and truth. All three appear to be normally distributed. Baseball Reference appears to have the most mass around zero, followed closely by Fan Graph (though Fan Graph seems to have a lot more mass between 5 and 15 than Baseball Reference). Again, Baseball Prospectus appeared to be the worst, having much less mass around zero, and more values near -20 and 20 than both of the other two. 
 
-In looking at the means differences, we see that Baseball Reference is close to 0 (as we would expect). However, both Baseball Prospectus and Fan Graphs have means above 2, and indication of possbile systematic error (and a possible explanation of why Fan Graph had all that extra mass between 5 and 15). In looking at the stadard deviations, we continue to see the trend of Baseball Prospectus being the worst predictor of the three, while Baseball Reference and Fan Graphs have similar standard deviations, with Baseball Reference being slightly better, as we would have expected from our graph. 
+In looking at the means differences, we see that Baseball Reference is close to 0 (as we would expect). However, both Baseball Prospectus and Fan Graphs have means above 2, and indication of possible systematic error (and a possible explanation of why Fan Graph had all that extra mass between 5 and 15). In looking at the standard deviations, we continue to see the trend of Baseball Prospectus being the worst predictor of the three, while Baseball Reference and Fan Graphs have similar standard deviations, with Baseball Reference being slightly better, as we would have expected from our graph. 
 
 ```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
 
@@ -585,7 +586,7 @@ diff2 %>% ggplot() +
 
 ```
 
-Due to the number of baseline wins assumed by the predictors, we were concerned that the predictions might have suffered at the extremes (i.e. when teams win less than ~55 games or more than ~100). To visually assess this, we plotted the true wins against the predicted wins for each predictor. In this graph, we see Baseball Prospectus had a tendency to greatly overestimate the wins of poorly performing teams (in one cass predicting close to 90 wins for a 50 win team!). It also had an apparent trend of overpredicting wins throughout its range, again a suggestion of systematic error. Both Baseball Reference and Fan Graph also showed some signs of overpredicting wins for bad teams and underestimating them for great teams, but their differences were less extreme. Additionally, the middle range of both of these predictors performed very well. The smaller residuals in these two predictors was also apparent when all three were plotted together. 
+Due to the number of baseline wins assumed by the predictors, we were concerned that the predictions might have suffered at the extremes (i.e. when teams win less than ~55 games or more than ~100). To visually assess this, we plotted the true wins against the predicted wins for each predictor. In this graph, we see Baseball Prospectus had a tendency to greatly overestimate the wins of poorly performing teams (in one case predicting close to 90 wins for a 50 win team!). It also had an apparent trend of overpredicting wins throughout its range, again a suggestion of systematic error. Both Baseball Reference and Fan Graph also showed some signs of overpredicting wins for bad teams and underestimating them for great teams, but their differences were less extreme. Additionally, the middle range of both of these predictors performed very well. The smaller residuals in these two predictors was also apparent when all three were plotted together. 
 
 ```{r}
 
@@ -638,7 +639,7 @@ In 2013, Baseball Reference published [an article](https://www.baseball-referenc
 
 Next, [Fan Graph](https://www.fangraphs.com/library/misc/war/) has reported that it awards 1000 WAR per season, 570 to hitters and 430 to pitchers. Though this balance might be about right for today's game, it might not make sense for other eras of the game. Specifically, one might expect the Deadball 2 Era (1960-1969) where pitchers dominated hitters (to the point where Carl Yastrzemski won the batting title in 1968 with a record low average of .301) and the Steroid Era (1985-2005) where hitters like Barry Bonds, Sammy Sosa, Mark Maguire, and Jose Canseco began hitting homeruns at rates never seen before to have different balances. 
 
-Additionally, in continuing our AL versus NL comparison, we examined the differnece specifically during the Designated Hitter Era (1973-present) when there actually existed a fundamental difference between the two leagues (AL has DH, NL does not). Lastly, we also examined the Wildcard Era (1994-present) where an additional playoff spot was added, which is thought to make the game more competetive as more teams remain in the playoff hunt longer (and thus strive more for wins rather than just contract boosting stats). 
+Additionally, in continuing our AL versus NL comparison, we examined the difference specifically during the Designated Hitter Era (1973-present) when there actually existed a fundamental difference between the two leagues (AL has DH, NL does not). Lastly, we also examined the Wildcard Era (1994-present) where an additional playoff spot was added, which is thought to make the game more competetive as more teams remain in the playoff hunt longer (and thus strive more for wins rather than just contract boosting stats). 
 
 
 ```{r}
@@ -730,7 +731,7 @@ kable(league_splits, caption = "Analysis by League")
 
 As expected, Fan Graph performed less well during the Deadball 2 Era. However, so did the other two predictors, which actually had greater performance reduction than Fan Graph. Even more surprising, all three predictors saw performance improvements during the Steroid Era, with Baseball Reference and Baseball Propsectus having the greatest performance improvements. These results suggest that all three algorithms are weighted too heavily towards batters performance (moreso for Baseball Reference and Baseball Prospectus than Fan Graph) in terms of predicting true wins. 
 
-All three predictors performed better in the DH Era compared to the entirety of the dataset, though interestingly all three saw more improvement in predicting NL wins (where there was no rule change) than AL wins (where there was).This may be an artifcat of the improvement in the Steroid Era (where we saw all three predictors perform better) and that the homerun kings ---Barry Bonds, Mark Maguire, and Sammy Sosa--- were all in playing in the National League. 
+All three predictors performed better in the DH Era compared to the entirety of the dataset, though interestingly all three saw more improvement in predicting NL wins (where there was no rule change) than AL wins (where there was).This may be an artifact of the improvement in the Steroid Era (where we saw all three predictors perform better) and that the homerun kings ---Barry Bonds, Mark Maguire, and Sammy Sosa--- were all in playing in the National League. 
 
 In analyzing the Wildcard Era, we see that the MSE values for Fan Graph and Baseball Reference were nearly equal to their respective MSE values for the entire dataset: Fan Graph having MSE's of 6.25 and 6.24 and Baseball Reference having MSE's of 5.14 and 5.13 in the Wildcard and whole dataset, respectively. Baseball Prospectus had great improvement in the Wildcard Era, having an MSE of 7.90 compared to a 9.26 for the whole dataset. Despite its improvement in this subset, it still performed worse than both of the other predictors.  
 
@@ -753,11 +754,10 @@ kable(wildcard, caption = "Wildcard Era")
 
 
 ### Final Analysis
-What did you learn about the data? How did you answer the questions? How can you justify your answers?
 
 Based on our above analysis, it was clear that Baseball Prospectus was the worst predictor of the three, continually performing substantially worse than the other two predictors. Baseball Reference did seem to have an edge over Fan Graph in most of our categories, but Fan Graph did notably have a better relationship in terms of the correlation between predicted and true wins (1.002 compared to Baseball Reference's 0.986) and also showed less variability to pitcher dominant versus hitter dominant eras.
 
-Based on this, we attempted to build a combined predictor that used all three WAR statistics to create a new WAR statistic that outperformed all three of the previous ones in terms of MSE. We did this using 10-fold cross validation. For each fold, we used the `optim` function to optimally fit the coefficients based on the data in the other nine folds, then assessing it on the tenth fold (serving as our test set). We average this across our ten folds, getting our final model. The evaluation of this final model on the entire test set returned an MSE of 4.69, outperforming Baseball Reference by nearly 10%! Additionally, in observing the below plot we see that the in the plot of predicted versus true wins, our predictor follows the line more closely and with less variabiliy than all of the other three predictors. 
+Based on this, we attempted to build a combined predictor that used all three WAR statistics to create a new WAR statistic that outperformed all three of the previous ones in terms of MSE. We did this using 10-fold cross validation. For each fold, we used the `optim` function to optimally fit the coefficients based on the data in the other nine folds, then assessing it on the tenth fold (serving as our test set). We average this across our ten folds, getting our final model. The evaluation of this final model on the entire test set returned an MSE of 4.69, outperforming Baseball Reference by nearly 10%! Additionally, in observing the below plot we see that the in the plot of predicted versus true wins, our predictor follows the line more closely and with less variability than all of the other three predictors. 
 
 ```{r}
 set.seed(123)
