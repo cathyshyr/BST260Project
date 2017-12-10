@@ -634,11 +634,11 @@ data_wide %>% ggplot() +
 
 Based on our above analyses, it was quite clear that Fan Graph and Baseball Reference greatly outperformed Baseball Prospectus, with Baseball Reference having a slight edge over Fan Graph. However, in researching about the calculations of WAR, there were a few side analyses we also wanted to perform. 
 
-In 2013, Baseball Reference published [an article](https://www.baseball-reference.com/about/war_explained.shtml) about how it updated its WAR baseline wins; before, it had a different number of baseline wins for the American and National Leagues (AL was still 0.294 before, but the NL was changed from 0.320). The article also discusses how part of the reason for the change was that FanGraphs was already using 0.294 for both leagues. Based on this, we were interested in investigating if there was a difference in the performance, quantified by MSE, between American and National League teams for the predictors. Interestingly, there was a difference in all three algorithms, with the predicted wins for the American League teams being having less error than the predicted wins for the National League teams. However, the differences were not so extreme as to change the rank of the predictors: the best predictor in terms of MSE was Baseball Reference's AL predictions, followed by its NL, then Fan Graphs AL and NL respectively, and finally Baseball Prospectus's AL and NL. 
+In 2013, Baseball Reference published [an article](https://www.baseball-reference.com/about/war_explained.shtml) about how it updated its WAR baseline wins; before, it had a different number of baseline wins for the American and National Leagues (AL was still 0.294 before, but the NL was changed from 0.320). The article also discusses how part of the reason for the change was that FanGraphs was already using 0.294 for both leagues. Based on this, we were interested in investigating if there was a difference in the performance, quantified by MSE, between American and National League teams for the predictors.
 
-Next, [Fan Graph](https://www.fangraphs.com/library/misc/war/) has reported that it awards 1000 WAR per season, 570 to hitters and 430 to pitchers. Though this balance might be about right for today's game, it might not make sense for other eras of the game. Specifically, one might expect the deadball 2 era (1960-1969) where pitchers dominated hitters (to the point where Carl Yastrzemski won the batting title in 1968 with a record low average of .301) and the steroid era (1985-2005) where hitters like Barry Bonds, Sammy Sosa, Mark Maguire, and Jose Canseco began hitting homeruns at rates never seen before to have different balances. 
+Next, [Fan Graph](https://www.fangraphs.com/library/misc/war/) has reported that it awards 1000 WAR per season, 570 to hitters and 430 to pitchers. Though this balance might be about right for today's game, it might not make sense for other eras of the game. Specifically, one might expect the Deadball 2 Era (1960-1969) where pitchers dominated hitters (to the point where Carl Yastrzemski won the batting title in 1968 with a record low average of .301) and the Steroid Era (1985-2005) where hitters like Barry Bonds, Sammy Sosa, Mark Maguire, and Jose Canseco began hitting homeruns at rates never seen before to have different balances. 
 
-Additionally, in continuing our AL v NL comparison, we examined the differnece specifically during the designated hitter era (1973-present) when there actually existed a fundamental difference between the two leagues (AL has DH, NL does not). Lastly, we also examined the wild card era (1994-present) where an additional playoff spot was added, which is thought to make the game more competetive as more teams remain in the playoff hunt longer (and thus strive more for wins rather than just contract boosting stats). 
+Additionally, in continuing our AL versus NL comparison, we examined the differnece specifically during the Designated Hitter Era (1973-present) when there actually existed a fundamental difference between the two leagues (AL has DH, NL does not). Lastly, we also examined the Wildcard Era (1994-present) where an additional playoff spot was added, which is thought to make the game more competetive as more teams remain in the playoff hunt longer (and thus strive more for wins rather than just contract boosting stats). 
 
 
 ```{r}
@@ -719,12 +719,34 @@ wildcard1 = data_wide %>%
 wildcard1 = cbind("League"="MLB", wildcard1)
 wildcard = rbind(wildcard, wildcard1)
 
+```
+
+
+Interestingly, there was a difference in all three algorithms, with the predicted wins for the American League teams having less error than the predicted wins for the National League teams. However, the differences were not so extreme as to change the rank of the predictors: the best predictor in terms of MSE was Baseball Reference's AL predictions, followed by its NL, then Fan Graphs AL and NL respectively, and finally Baseball Prospectus's AL and NL. 
+
+```{r, echo = FALSE}
 kable(league_splits, caption = "Analysis by League")
+```
+
+As expected, Fan Graph performed less well during the Deadball 2 Era. However, so did the other two predictors, which actually had greater performance reduction than Fan Graph. Even more surprising, all three predictors saw performance improvements during the Steroid Era, with Baseball Reference and Baseball Propsectus having the greatest performance improvements. These results suggest that all three algorithms are weighted too heavily towards batters performance (moreso for Baseball Reference and Baseball Prospectus than Fan Graph) in terms of predicting true wins. 
+
+```{r, echo = FALSE}
 kable(deadball2, caption = "Deadball 2 Era")
+
+```
+
+```{r, echo = FALSE}
 kable(steroid, caption = "Steroid Era")
+```
+
+```{r, echo = FALSE}
 kable(dh, caption = "Designated Hitter Era")
+```
+
+```{r, echo = FALSE}
 kable(wildcard, caption = "Wildcard Era")
 ```
+
 
 ### Final Analysis
 What did you learn about the data? How did you answer the questions? How can you justify your answers?
