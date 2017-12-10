@@ -15,6 +15,7 @@ library(dplyr)
 library(broom)
 library(Lahman)
 library(caret)
+library(knitr)
 
 
 MSE <- function(Truth_ratings, predicted_ratings){
@@ -520,13 +521,29 @@ What visualizations did you use to look at your data in different ways? What are
 
 ####How well does WAR compare to the true number of wins?
 
-First, we wanted to assess at the most basic level which predictor performed the best. We defined our assessment in terms of the mean square error (MSE) between the true wins a team had during a season and the predcited wins by each of the three algorithms. In terms of MSE, we found that the Baseball Reference performed the best (MSE = 5.13), then Fan Graph (MSE = 6.23), and last was Baseball Prospectus (MSE = 9.25). Additionally, we also wanted to assess how well the different WAR statistics correlated with true wins. Ideally, we would expect slopes of 1 (i.e. each 1 additional WAR corresponds to 1 additional team win). In terms of this, Fan Graph had the best model, with a slope of 1.002, followed closely by Baseball Reference 0.986, and lastly ---far behind the other two--- was Baseball Prospectus at 0.692. 
+Before doing any statistical analysis, as a sanity check and easy visualization of the data we created box plots of the redisudals (predicted - true wins) for each team and each WAR statistic. Ideally, we would hope for these residuals to be centered at 0, with little variance (i.e. short boxes) and little to no outliers. As can be seen in the plot below, our results for Fan Graph and Baseball Reference both fit tese criteria. However, Baseball Prospectus had much more variability in its residuals, having larger residuals (i.e. longer boxes), more outliers, and was less centered around 0. Additionally, for Fan Graph and Baseball Reference there are no obvious team effects. 
 
-Next, in looking at the means differences, we see that Baseball Reference is close to 0 (as we would expect). However, both Baseball Prospectus and Fan Graphs have means above 2, and indication of possbile systematic error. In looking at the stadard deviations, we continue to see the trend of Baseball Prospectus being the worst predictor of the three, while Baseball Reference and Fan Graphs have similar standard deviations, with Baseball Reference being slightly better. 
+```{r}
+data_long <- gather(data_wide, Pred, Val, -c(franchID, yearID, Truth, Games, lgID))
+data_long2 <- data_long %>%
+  mutate(Residuals = (as.numeric(as.character(Val)) - as.numeric(as.character(Truth))))
 
-In 2013, Baseball Reference published [an article](https://www.baseball-reference.com/about/war_explained.shtml) about how it updated its WAR baseline wins; before, it had a different number of baseline wins for the American and National Leagues (AL was still 0.294 before, but the NL was changed from 0.320). The article also discusses how part of the reason for the change was that FanGraphs was already using 0.294 for both leagues. Based on this, we were interested in investigating if there was a difference in the MSE between American and National League teams. 
+gg2 <- data_long2 %>%
+  ggplot(aes(x = franchID, y = Residuals)) +
+  geom_boxplot(fill = "lightblue") +
+  facet_wrap(~ Pred, ncol = 1) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Team Name") +
+  ggtitle("")
+gg2
+```
 
 
+First, in our more formal analysis, we wanted to assess at the most basic level which predictor performed the best. We defined our assessment in terms of the mean square error (MSE) between the true wins a team had during a season and the wins predicted by each of the three algorithms. In terms of MSE, we found that the Baseball Reference performed the best (MSE = 5.13), then Fan Graph (MSE = 6.23), and last was Baseball Prospectus (MSE = 9.25), whcih matched our initial assessment from our box plot. Additionally, we also wanted to assess how well the different WAR statistics correlated with true wins. Ideally, we would expect slopes of 1 (i.e. each 1 additional WAR corresponds to 1 additional team win). In terms of this, Fan Graph had the best model, with a slope of 1.002, followed closely by Baseball Reference 0.986, and lastly ---far behind the other two--- was Baseball Prospectus at 0.692. 
+
+In visualizing the differences between our predictors and the true wins, we produced the below plot, histograms of the differences between prediction and truth. All three appear to be normally distributed. Baseball Reference appears to have the most mass around zero, followed closely by Fan Graph (though Fan Graph seems to have a lot more mass between 5 and 15 than Baseball Reference). Again, Baseball Prospectus appeared to be the worst, having much less mass around zero, and more values near -20 and 20 than both of the other two. 
+
+In looking at the means differences, we see that Baseball Reference is close to 0 (as we would expect). However, both Baseball Prospectus and Fan Graphs have means above 2, and indication of possbile systematic error (and a possible explanation of why Fan Graph had all that extra mass between 5 and 15). In looking at the stadard deviations, we continue to see the trend of Baseball Prospectus being the worst predictor of the three, while Baseball Reference and Fan Graphs have similar standard deviations, with Baseball Reference being slightly better, as we would have expected from our graph. 
 
 ```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
 
@@ -552,14 +569,7 @@ statistics_matrix[3,2] = mean(BRef_diff)
 statistics_matrix[3,3] = sd(BRef_diff)
 statistics_matrix[3,4] = lm(Truth ~ BRefPred, data = data_wide)$coef[[2]]
 
-show(statistics_matrix)
-
-
-league_splits = data_wide %>%
-    group_by(lgID) %>%
-    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
-              MSE(Truth, BRefPred) )
-
+kable(statistics_matrix)
 
 diff2 = cbind(FG_diff, BBP_diff, BRef_diff)
 diff2 = as.data.frame(diff2)
@@ -573,19 +583,27 @@ diff2 %>% ggplot() +
     ylab("Count") +
     scale_fill_manual(values = c("Fan Graph" = rgb(1,0,0), "Baseball Prospectus" = rgb(0,1,0), "Baseball Reference"=rgb(0,0,1)))
 
-data_wide %>% ggplot(aes(x = Truth, y = FanGraphPred)) +  
-    geom_point(color="red", size = 1) +
-    geom_abline(slope = 1, intercept = 0) +
-    ggtitle("Fan Graph True v Predicted Wins") +
-    xlab("True Wins") +
-    ylab("Predicted Wins") +
-    xlim(40, 125) +
-    ylim(40, 125)
+```
+
+Due to the number of baseline wins assumed by the predictors, we were concerned that the predictions might have suffered at the extremes (i.e. when teams win less than ~55 games or more than ~100). To visually assess this, we plotted the true wins against the predicted wins for each predictor. In this graph, we see Baseball Prospectus had a tendency to greatly overestimate the wins of poorly performing teams (in one cass predicting close to 90 wins for a 50 win team!). It also had an apparent trend of overpredicting wins throughout its range, again a suggestion of systematic error. Both Baseball Reference and Fan Graph also showed some signs of overpredicting wins for bad teams and underestimating them for great teams, but their differences were less extreme. Additionally, the middle range of both of these predictors performed very well. The smaller residuals in these two predictors was also apparent when all three were plotted together. 
+
+```{r}
+
 
 data_wide %>% ggplot(aes(x = Truth, y = BBproPred)) +  
     geom_point(color="green", size = 1) +
     geom_abline(slope = 1, intercept = 0) +
     ggtitle("Baseball Prospectus True v Predicted Wins") +
+    xlab("True Wins") +
+    ylab("Predicted Wins") +
+    xlim(40, 125) +
+    ylim(40, 125)
+
+
+data_wide %>% ggplot(aes(x = Truth, y = FanGraphPred)) +  
+    geom_point(color="red", size = 1) +
+    geom_abline(slope = 1, intercept = 0) +
+    ggtitle("Fan Graph True v Predicted Wins") +
     xlab("True Wins") +
     ylab("Predicted Wins") +
     xlim(40, 125) +
@@ -612,79 +630,101 @@ data_wide %>% ggplot() +
     xlim(40, 125) +
     ylim(40, 125)
 
-##Is there a difference by Era? 
+```
 
-#A few Eras to consider: Deadball 2: 1960-1969
-#                       DH 1973 - Present
-#                       Free Agency 1975-Present
-#                       Steroid Ero 1985-2005
-#                       Wild Card: 1994 - Present
+Based on our above analyses, it was quite clear that Fan Graph and Baseball Reference greatly outperformed Baseball Prospectus, with Baseball Reference having a slight edge over Fan Graph. However, in researching about the calculations of WAR, there were a few side analyses we also wanted to perform. 
+
+In 2013, Baseball Reference published [an article](https://www.baseball-reference.com/about/war_explained.shtml) about how it updated its WAR baseline wins; before, it had a different number of baseline wins for the American and National Leagues (AL was still 0.294 before, but the NL was changed from 0.320). The article also discusses how part of the reason for the change was that FanGraphs was already using 0.294 for both leagues. Based on this, we were interested in investigating if there was a difference in the performance, quantified by MSE, between American and National League teams for the predictors. Interestingly, there was a difference in all three algorithms, with the predicted wins for the American League teams being having less error than the predicted wins for the National League teams. However, the differences were not so extreme as to change the rank of the predictors: the best predictor in terms of MSE was Baseball Reference's AL predictions, followed by its NL, then Fan Graphs AL and NL respectively, and finally Baseball Prospectus's AL and NL. 
+
+Next, [Fan Graph](https://www.fangraphs.com/library/misc/war/) has reported that it awards 1000 WAR per season, 570 to hitters and 430 to pitchers. Though this balance might be about right for today's game, it might not make sense for other eras of the game. Specifically, one might expect the deadball 2 era (1960-1969) where pitchers dominated hitters (to the point where Carl Yastrzemski won the batting title in 1968 with a record low average of .301) and the steroid era (1985-2005) where hitters like Barry Bonds, Sammy Sosa, Mark Maguire, and Jose Canseco began hitting homeruns at rates never seen before to have different balances. 
+
+Additionally, in continuing our AL v NL comparison, we examined the differnece specifically during the designated hitter era (1973-present) when there actually existed a fundamental difference between the two leagues (AL has DH, NL does not). Lastly, we also examined the wild card era (1994-present) where an additional playoff spot was added, which is thought to make the game more competetive as more teams remain in the playoff hunt longer (and thus strive more for wins rather than just contract boosting stats). 
+
+
+```{r}
+
+
+league_splits = data_wide %>%
+    group_by(lgID) %>%
+    summarize("Fan Graph"=MSE(Truth, FanGraphPred), "Baseball Prospectus"=MSE(Truth, BBproPred),
+              "Baseball Reference"=MSE(Truth, BRefPred) ) %>%
+    rename("League" = lgID)
+
+
 
 deadball2 = data_wide %>%
     filter(yearID %in% 1960:1969) %>%
     group_by(lgID) %>%
-    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
-              MSE(Truth, BRefPred) )
-deadball2 = cbind(deadball2, Era="Deadball")
+    summarize("Fan Graph"=MSE(Truth, FanGraphPred), "Baseball Prospectus"=MSE(Truth, BBproPred),
+              "Baseball Reference"=MSE(Truth, BRefPred) ) %>%
+    rename("League" = lgID)
+deadball22 = data_wide %>%
+    filter(yearID %in% 1960:1969) %>%
+    summarize("Fan Graph"=MSE(Truth, FanGraphPred), "Baseball Prospectus"=MSE(Truth, BBproPred),
+              "Baseball Reference"=MSE(Truth, BRefPred) )
+deadball22 = cbind("League"="MLB", deadball22)
+#steroid = cbind(Era="Steroid", steroid)
+deadball2 = rbind(deadball2, deadball22)
+#deadball2 = cbind(Era="Deadball", deadball2 )
 
-dh = data_wide %>%
-    filter(yearID %in% 1973:2016) %>%
-    group_by(lgID) %>%
-    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
-              MSE(Truth, BRefPred) )
-dh = cbind(dh, Era="DH")
 
-free_agency = data_wide %>%
-    filter(yearID %in% 1975:2016) %>%
-    group_by(lgID) %>%
-    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
-              MSE(Truth, BRefPred) )
-free_agency = cbind(free_agency, Era = "Free Agency")
 
 steroid = data_wide %>%
     filter(yearID %in% 1985:2005) %>%
     group_by(lgID) %>%
-    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
-              MSE(Truth, BRefPred) )
-steroid = cbind(steroid, Era="Steroid")
+    summarize("Fan Graph"=MSE(Truth, FanGraphPred), "Baseball Prospectus"=MSE(Truth, BBproPred),
+              "Baseball Reference"=MSE(Truth, BRefPred) ) %>%
+    rename("League" = lgID)
+
+steroid1 = data_wide %>%
+    filter(yearID %in% 1985:2005) %>%
+    summarize("Fan Graph"=MSE(Truth, FanGraphPred), "Baseball Prospectus"=MSE(Truth, BBproPred),
+              "Baseball Reference"=MSE(Truth, BRefPred) ) 
+steroid1 = cbind("League"="MLB", steroid1)
+steroid = rbind(steroid, steroid1)
+
+
+dh = data_wide %>%
+    filter(yearID %in% 1973:2016) %>%
+    group_by(lgID) %>%
+    summarize("Fan Graph"=MSE(Truth, FanGraphPred), "Baseball Prospectus"=MSE(Truth, BBproPred),
+              "Baseball Reference"=MSE(Truth, BRefPred) ) %>%
+    rename("League" = lgID)
+
+dh1 = data_wide %>%
+    filter(yearID %in% 1973:2016) %>%
+    summarize("Fan Graph"=MSE(Truth, FanGraphPred), "Baseball Prospectus"=MSE(Truth, BBproPred),
+              "Baseball Reference"=MSE(Truth, BRefPred) ) 
+
+dh1 = cbind("League"="MLB", dh1)
+dh = rbind(dh, dh1)
+
+
+
+
+
 
 wildcard = data_wide %>%
     filter(yearID %in% 1994:2016) %>%
     group_by(lgID) %>%
-    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
-              MSE(Truth, BRefPred) )
-wildcard = cbind(wildcard, Era="Wildcard")
+    summarize("Fan Graph"=MSE(Truth, FanGraphPred), "Baseball Prospectus"=MSE(Truth, BBproPred),
+              "Baseball Reference"=MSE(Truth, BRefPred) ) %>%
+    rename("League" = lgID)
 
-era_analysis = rbind(deadball2, dh, free_agency, steroid, wildcard)
+wildcard1 = data_wide %>%
+    filter(yearID %in% 1994:2016) %>%
+    summarize("Fan Graph"=MSE(Truth, FanGraphPred), "Baseball Prospectus"=MSE(Truth, BBproPred),
+              "Baseball Reference"=MSE(Truth, BRefPred) ) 
 
+wildcard1 = cbind("League"="MLB", wildcard1)
+wildcard = rbind(wildcard, wildcard1)
+
+kable(league_splits, caption = "Analysis by League")
+kable(deadball2, caption = "Deadball 2 Era")
+kable(steroid, caption = "Steroid Era")
+kable(dh, caption = "Designated Hitter Era")
+kable(wildcard, caption = "Wildcard Era")
 ```
-
-From this plot, it appears that both `rWAR` and `WARP` capture the trend of true wins over time. However, there is a substantial bias because both WAR statistics are hugely underestimating the truth. 
-
-Next, let's build a naive model to capture the effect of WAR on predicting the truth for each of the 3 WAR statistics. 
-
-
-
-According to RMSE, `rWAR` is a better predictor than `WARP`. However, we can definitely improve upon the naive model by accounting for the substructure within our data, e.g. team effect, team x year interaction effect, etc. 
-
-```{r Exploratory Boxplots, fig.width=10, fig.height=10, fig.align='center'}
-data_long <- gather(data_wide, Pred, Val, -c(franchID, yearID, Truth, Games, lgID))
-data_long2 <- data_long %>%
-  mutate(Residuals = (as.numeric(as.character(Val)) - as.numeric(as.character(Truth))))
-
-gg2 <- data_long2 %>%
-  ggplot(aes(x = franchID, y = Residuals)) +
-  geom_boxplot(fill = "lightblue") +
-  facet_wrap(~ Pred, ncol = 1) +
-  theme(axis.text.x = element_text(angle = 90)) +
-  xlab("Team Name") +
-  ggtitle("")
-gg2
-```
-
-Here, we plot the residuals (WAR preditions - true number of wins) across different teams for the 3 WAR statistics `WARP` (top), `rWAR` (middle), and `fWAR` (bottom). To assess degree of fit, we visually examine these boxplots, with boxplots centered around 0 suggesting good fit. 
-
-From these residual boxplots, we can see that Baseball Prospectus has the largest residuals (longest boxes) across the different teams. Moreover, it also has many outliers, which may dilute signal. On the other hand, Baseball Reference and Fangraph's WAR statistics perform relatively well, with the boxplots centered around 0. 
 
 ### Final Analysis
 What did you learn about the data? How did you answer the questions? How can you justify your answers?
