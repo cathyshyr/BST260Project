@@ -730,6 +730,10 @@ kable(league_splits, caption = "Analysis by League")
 
 As expected, Fan Graph performed less well during the Deadball 2 Era. However, so did the other two predictors, which actually had greater performance reduction than Fan Graph. Even more surprising, all three predictors saw performance improvements during the Steroid Era, with Baseball Reference and Baseball Propsectus having the greatest performance improvements. These results suggest that all three algorithms are weighted too heavily towards batters performance (moreso for Baseball Reference and Baseball Prospectus than Fan Graph) in terms of predicting true wins. 
 
+All three predictors performed better in the DH Era compared to the entirety of the dataset, though interestingly all three saw more improvement in predicting NL wins (where there was no rule change) than AL wins (where there was).This may be an artifcat of the improvement in the Steroid Era (where we saw all three predictors perform better) and that the homerun kings ---Barry Bonds, Mark Maguire, and Sammy Sosa--- were all in playing in the National League. 
+
+In analyzing the Wildcard Era, we see that the MSE values for Fan Graph and Baseball Reference were nearly equal to their respective MSE values for the entire dataset: Fan Graph having MSE's of 6.25 and 6.24 and Baseball Reference having MSE's of 5.14 and 5.13 in the Wildcard and whole dataset, respectively. Baseball Prospectus had great improvement in the Wildcard Era, having an MSE of 7.90 compared to a 9.26 for the whole dataset. Despite its improvement in this subset, it still performed worse than both of the other predictors.  
+
 ```{r, echo = FALSE}
 kable(deadball2, caption = "Deadball 2 Era")
 
@@ -750,6 +754,10 @@ kable(wildcard, caption = "Wildcard Era")
 
 ### Final Analysis
 What did you learn about the data? How did you answer the questions? How can you justify your answers?
+
+Based on our above analysis, it was clear that Baseball Prospectus was the worst predictor of the three, continually performing substantially worse than the other two predictors. Baseball Reference did seem to have an edge over Fan Graph in most of our categories, but Fan Graph did notably have a better relationship in terms of the correlation between predicted and true wins (1.002 compared to Baseball Reference's 0.986) and also showed less variability to pitcher dominant versus hitter dominant eras.
+
+Based on this, we attempted to build a combined predictor that used all three WAR statistics to create a new WAR statistic that outperformed all three of the previous ones in terms of MSE. We did this using 10-fold cross validation. For each fold, we used the `optim` function to optimally fit the coefficients based on the data in the other nine folds, then assessing it on the tenth fold (serving as our test set). We average this across our ten folds, getting our final model. The evaluation of this final model on the entire test set returned an MSE of 4.69, outperforming Baseball Reference by nearly 10%! Additionally, in observing the below plot we see that the in the plot of predicted versus true wins, our predictor follows the line more closely and with less variabiliy than all of the other three predictors. 
 
 ```{r}
 set.seed(123)
