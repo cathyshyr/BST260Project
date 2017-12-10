@@ -1,7 +1,6 @@
 BST260 Final Project
 
 The WAR of Moneyball: Wins Above Replacement as a Predictor of Wins
-
 by Conor Foley, Benjamin Hong, and Cathy Wang
 
 This project focuses on using wins above replacement (WAR) statistics to predict baseball win. 
