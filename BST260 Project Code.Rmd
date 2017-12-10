@@ -777,11 +777,11 @@ for(i in 1:k){
   }
 }
 
-rownames(MSE_val) <- c("Baseball Reference", "Baseball Prospectus", "Fangraph", "Final Model")
+rownames(MSE_val) <- c("Baseball Reference", "Baseball Prospectus", "Fangraph", "Combined Model")
 apply(MSE_val, 1, mean)
 ```
 
-```{r, warning = FALSE, message = FALSE, fig.width=10}
+```{r, warning = FALSE, message = FALSE}
 #Obtain coefficients from combined model
 final_coef <- apply(coeffs, 1, mean)
 
@@ -789,20 +789,6 @@ final_coef <- apply(coeffs, 1, mean)
 data_wide <- data_wide %>%
   mutate(CombinedPred = final_coef[1]*data_wide$BRefPred + final_coef[2]*data_wide$BBproPred + final_coef[3]*data_wide$FanGraphPred )
 
-
-Final_diff = data_wide$CombinedPred - data_wide$Truth
-diff3 = cbind(FG_diff, BBP_diff, BRef_diff, Final_diff)
-diff3 = as.data.frame(diff3)
-
-diff3 %>% ggplot() + 
-    geom_histogram(aes(x=FG_diff, fill="Fan Graph"), alpha = 0.2, breaks = seq(-20, 20, 0.5)) +
-    geom_histogram(aes(x=BBP_diff, fill="Baseball Prospectus"), alpha = 0.2, breaks = seq(-20, 20, 0.5)) +
-    geom_histogram(aes(x=BRef_diff, fill="Baseball Reference"), alpha = 0.2, breaks = seq(-20, 20, 0.5)) +
-  geom_histogram(aes(x=Final_diff, fill="Final Model"), alpha = 0.2, breaks = seq(-20, 20, 0.5)) +
-    ggtitle("Difference Between Predicted and True Wins") +
-    xlab("Difference") +
-    ylab("Count") +
-    scale_fill_manual(values = c("Fan Graph" = rgb(1,0,0), "Baseball Prospectus" = rgb(0,1,0), "Baseball Reference"=rgb(0,0,1), "Final Model" = rgb(0, 0, 0)))
 
 data_wide %>% ggplot() +
     geom_point(aes(x = Truth, y = FanGraphPred, color="Fan Graph"), alpha = 0.5) + 
@@ -816,8 +802,6 @@ data_wide %>% ggplot() +
     ylab("Predicted Wins") +
     xlim(40, 125) +
     ylim(40, 125)
-
-
 ```
 
 
