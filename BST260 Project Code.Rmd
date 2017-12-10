@@ -30,7 +30,7 @@ Sabermetrics has become quite popular, especially in more recent years. Research
 
 ### Related Work
 
-![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/moneyball07.jpg)
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/Pictures/moneyball07.jpg)
 
 Sabermetrics has a polarizing reputation in the outside world. It is not often regarded as "serious" in academia, and until more recent years, its value was understated and overlooked by individuals of the baseball world. However, the tides began to turn when Michael Lewis published "Moneyball" in 2003, which focuses on the analytical and sabermetric approach to assembling a competitive baseball team.
 
@@ -59,7 +59,7 @@ Our data was obtained from the `Teams` dataset in the `Lahman` package (there is
 
 Baseball Prospectus was the least challenging of the three for data wrangling. All players for each season were displayed on a single page with their respective team and BWARP (Baseball Prospectus's version of WAR) annually for each year from 1871 to 2017 as can be seen in the image below. To scrape year-specific data, we vectorized over the range of years and used the function `set_values` and `submit_form` to automate the selection process and extracted the table of interest by identifying the corresponding `html_node`. The code has been provided below (though we recommend caution in running any of our data wrangling code blocks as they can take on the order of hours to run; we wrote all of our wrangled data to csv files for much faster data access in the later analyses).
 
-![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/scrape_prospectus.png)
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/Pictures/scrape_prospectus.png)
 
 
 ```{r Baseball Prospectus, eval = FALSE}
@@ -90,8 +90,8 @@ prospectus_batting <- do.call(rbind, lapply(1871:2017, prospectus, url = url_bat
 prospectus_pitching <- do.call(rbind, lapply(1871:2017, prospectus, url = url_pitching))
 
 #Reformat data 
-prospectus_pitching <- read.csv("prospectus_pitching_full.csv")
-prospectus_batting <- read.csv("prospectus_batting_full.csv")
+prospectus_pitching <- read.csv("Datasets/prospectus_pitching_full.csv")
+prospectus_batting <- read.csv("Datasets/prospectus_batting_full.csv")
 
 prospectus_pitching_small <- prospectus_pitching[, c("NAME", "TEAM", "YEAR", "PWARP")]
 names(prospectus_pitching_small) <- c("Name", "Team", "Year", "WARP")
@@ -103,7 +103,7 @@ names(prospectus_batting_small) <- c("Name", "Team", "Year", "WARP")
 
 The data on Baseball Reference are grouped by team and years. Separate tables are displayed for batters and pitchers. The screenshot below provides an example of one of the tables shown for the New York Yankees in 2017. 
 
-![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/baseballref_screencap.png)
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/Pictures/baseballref_screencap.png)
 
 Links to these tables follow a general pattern, so a vector of all the possible links was created. We then looped through all of these links to grab the tables from each page. Final touches were made to get the datasets into the right format (agin, the computation time on the was very large).
 
@@ -253,7 +253,7 @@ write.csv(prospectus_merge, file = "prospectus.csv")
 
 On Fan Graph, data is available for each player for each of the current 30 MLB teams as far back as their respective foundings. The URLs for these pages were in a standard format though, like Baseball Prospectus, there is a different page for each team for offensive players (i.e. hitters) and pitchers. A challenge unique to the Fan Graph data scraping was that the pages were generated via JavaScript, so simply connecting to the site with R to get the HTML for the pages would not actually include the required data, rather just the format of the page. To remedy this, a short PhantomJS script was written to initiate the JavaScript on the Fan Graph site. From within R, we can edit this script (specifically the var URL) to get all players (both pitchers and hitters) and all teams. Then, we simply parse the HTML code, get the WAR values for each player, sum them together for each team for each year, reformat the data, and finally save it (team, year, total WAR) to a csv file which we can load for our analysis.
 
-![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/FanGraphPic.png)
+![](https://raw.githubusercontent.com/wangcathy/BST260Project/master/Pictures/FanGraphPic.png)
 
 
 
@@ -448,7 +448,7 @@ After getting our three datasets into csv format, the next step was to combine t
 
 ```{r, warning = FALSE, message = FALSE}
 #Read in BBProspectus data and remove extraneous columns
-BBProspectus <- read.csv("prospectus.csv")
+BBProspectus <- read.csv("Datasets/prospectus.csv")
 BBProspectus <- BBProspectus %>%
     rename(BBproWAR = WARP, teamID = franchID) %>%
     select(c(-X, -W))
@@ -471,7 +471,7 @@ BBProspectus = BBProspectus %>%
     select(c(-teamID))
 
 #Read in BBProspectus data and remove extraneous columns
-BBReference <- read.csv("BBReference.csv")
+BBReference <- read.csv("Datasets/BBReference.csv")
 BBReference <- BBReference %>%
     filter(yearID >= 1949) %>%
     rename(BRefWAR = WAR) %>%
@@ -490,7 +490,7 @@ for (i in 1:length(BBReference[, 1]))
     }
 }
 
-FanGraphs <- read.csv("Conor/FanGraphWARs_better_format.csv")
+FanGraphs <- read.csv("Datasets/FanGraphWARs_better_format.csv")
 FanGraphs <- FanGraphs %>%
     rename(FanGraphWAR = WAR, yearID=year) %>%
     select(c(-X))
