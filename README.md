@@ -10,6 +10,9 @@ The repository is organized as follows:
 * BST260 Project Code.Rmd details all steps of our analysis
 * BST260_Project_Code.html is the accompanying knitted output of BST260 Project Code.Rmd
 * WARDatabase.R is the RShiny App we've created to visualize our results
+* scrap_final.js is the javascript for scraping Fan Graphs data
+* scrap_fangraph.R is the R code for scraping Fan Graphs data
+* BBRef_RCode.R is the R code for scraping Baseball Reference data
 * Data contains web-scraped data from our main baseball statistics sources
 	1. Baseball Reference (BBReference.csv)
 	2. Fan Graph (FanGraphWARs.csv)
