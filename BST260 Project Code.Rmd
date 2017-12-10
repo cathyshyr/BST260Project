@@ -520,36 +520,46 @@ What visualizations did you use to look at your data in different ways? What are
 
 ####How well does WAR compare to the true number of wins?
 
-First, we wanted to assess at the most basic level which predictor performed the best. We defined our assessment in terms of the mean square error (MSE) between the true wins a team had during a season and the predcited wins by each of the three algorithms. In terms of MSE, we found that the Baseball Reference performed the best (MSE = 5.13), then Fan Graph (MSE = 6.23), and last was Baseball Prospectus (MSE = 9.25). Additionally, we also wanted to assess how well the different WAR statistics correlated with true wins. Ideally, we would expect slopes of 1 (i.e. each 1 additional WAR corresponds to 1 additional team win). In terms of this, Fan Graph had the best model, with a slope of 1.002, followed closely by Baseball Reference 0.986, and lastly -far behind the other two- was Baseball Prospectus at 0.692. 
+First, we wanted to assess at the most basic level which predictor performed the best. We defined our assessment in terms of the mean square error (MSE) between the true wins a team had during a season and the predcited wins by each of the three algorithms. In terms of MSE, we found that the Baseball Reference performed the best (MSE = 5.13), then Fan Graph (MSE = 6.23), and last was Baseball Prospectus (MSE = 9.25). Additionally, we also wanted to assess how well the different WAR statistics correlated with true wins. Ideally, we would expect slopes of 1 (i.e. each 1 additional WAR corresponds to 1 additional team win). In terms of this, Fan Graph had the best model, with a slope of 1.002, followed closely by Baseball Reference 0.986, and lastly ---far behind the other two--- was Baseball Prospectus at 0.692. 
+
+Next, in looking at the means differences, we see that Baseball Reference is close to 0 (as we would expect). However, both Baseball Prospectus and Fan Graphs have means above 2, and indication of possbile systematic error. In looking at the stadard deviations, we continue to see the trend of Baseball Prospectus being the worst predictor of the three, while Baseball Reference and Fan Graphs have similar standard deviations, with Baseball Reference being slightly better. 
+
+In 2013, Baseball Reference published [an article](https://www.baseball-reference.com/about/war_explained.shtml) about how it updated its WAR baseline wins; before, it had a different number of baseline wins for the American and National Leagues (AL was still 0.294 before, but the NL was changed from 0.320). The article also discusses how part of the reason for the change was that FanGraphs was already using 0.294 for both leagues. Based on this, we were interested in investigating if there was a difference in the MSE between American and National League teams. 
+
+
 
 ```{r, warning = FALSE, message = FALSE, fig.width=10, fig.align='center'}
 
-
-
-MSE(data_wide$Truth, data_wide$FanGraphPred)
-MSE(data_wide$Truth, data_wide$BBproPred)
-MSE(data_wide$Truth, data_wide$BRefPred)
-
-statistics_matrix = matrix(nrow = 3, ncol = 3)
+statistics_matrix = matrix(nrow = 3, ncol = 4)
 rownames(statistics_matrix) = c("Fan Graph", "Baseball Prospectus", "Baseball Reference")
-colnames(statistics_matrix) = c("Mean Difference", "Standard Deviation", "Slope")
+colnames(statistics_matrix) = c("MSE", "Mean Difference", "Standard Deviation", "Slope")
 
 FG_diff = data_wide$FanGraphPred - data_wide$Truth
-statistics_matrix[1,1] = mean(FG_diff)
-statistics_matrix[1,2] = sd(FG_diff)
-statistics_matrix[1,3] = lm(Truth ~ FanGraphPred, data = data_wide)$coef[[2]]
+statistics_matrix[1,1] = MSE(data_wide$Truth, data_wide$FanGraphPred)
+statistics_matrix[1,2] = mean(FG_diff)
+statistics_matrix[1,3] = sd(FG_diff)
+statistics_matrix[1,4] = lm(Truth ~ FanGraphPred, data = data_wide)$coef[[2]]
 
 BBP_diff = data_wide$BBproPred - data_wide$Truth
-statistics_matrix[2,1] = mean(BBP_diff)
-statistics_matrix[2,2] = sd(BBP_diff)
-statistics_matrix[2,3] = lm(Truth ~ BBproPred, data = data_wide)$coef[[2]]
+statistics_matrix[2,1] = MSE(data_wide$Truth, data_wide$BBproPred)
+statistics_matrix[2,2] = mean(BBP_diff)
+statistics_matrix[2,3] = sd(BBP_diff)
+statistics_matrix[2,4] = lm(Truth ~ BBproPred, data = data_wide)$coef[[2]]
 
 BRef_diff = data_wide$BRefPred - data_wide$Truth
-statistics_matrix[3,1] = mean(BRef_diff)
-statistics_matrix[3,2] = sd(BRef_diff)
-statistics_matrix[3,3] = lm(Truth ~ BRefPred, data = data_wide)$coef[[2]]
+statistics_matrix[3,1] = MSE(data_wide$Truth, data_wide$BRefPred)
+statistics_matrix[3,2] = mean(BRef_diff)
+statistics_matrix[3,3] = sd(BRef_diff)
+statistics_matrix[3,4] = lm(Truth ~ BRefPred, data = data_wide)$coef[[2]]
 
 show(statistics_matrix)
+
+
+league_splits = data_wide %>%
+    group_by(lgID) %>%
+    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
+              MSE(Truth, BRefPred) )
+
 
 diff2 = cbind(FG_diff, BBP_diff, BRef_diff)
 diff2 = as.data.frame(diff2)
@@ -601,15 +611,6 @@ data_wide %>% ggplot() +
     ylab("Predicted Wins") +
     xlim(40, 125) +
     ylim(40, 125)
-
-
-
-
-
-league_splits = data_wide %>%
-    group_by(lgID) %>%
-    summarize(MSE(Truth, FanGraphPred), MSE(Truth, BBproPred),
-              MSE(Truth, BRefPred) )
 
 ##Is there a difference by Era? 
 
